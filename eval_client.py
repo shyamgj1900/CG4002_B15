@@ -14,15 +14,6 @@ IP_SERVER = socket.gethostbyname(socket.gethostname())
 FORMAT = 'utf-8'
 DISCONNECT_MSG = "!DISCONNECT"
 ADDR_OUT = (IP_SERVER, PORT_OUT)
-ENCRYPT_BLOCK_SIZE = 16
-connected = True
-
-
-# try:
-#     client_out = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#     client_out.connect(ADDR_OUT)
-# except socket.error as err:
-#     print("Socket error: " + str(err))
 
 
 class EvalClient(threading.Thread):
@@ -54,24 +45,27 @@ class EvalClient(threading.Thread):
         return encrypted_message
 
     def receive_game_state(self):
-        data = b''
-        while not data.endswith(b'_'):
-            _d = self.client_out.recv(1)
-            if not _d:
-                data = b''
-                break
-            data += _d
-        data = data.decode("utf-8")
-        length = int(data[:-1])
-        data = b''
-        while len(data) < length:
-            _d = self.client_out.recv(length - len(data))
-            if not _d:
-                data = b''
-                break
-            data += _d
-        msg = data.decode("utf8")
-        return json.loads(msg)
+        try:
+            data = b''
+            while not data.endswith(b'_'):
+                _d = self.client_out.recv(1)
+                if not _d:
+                    data = b''
+                    break
+                data += _d
+            data = data.decode("utf-8")
+            length = int(data[:-1])
+            data = b''
+            while len(data) < length:
+                _d = self.client_out.recv(length - len(data))
+                if not _d:
+                    data = b''
+                    break
+                data += _d
+            msg = data.decode("utf8")
+            return json.loads(msg)
+        except Exception as err:
+            print(f"Error receiving message from eval server: {err}")
 
     def handle_eval_server(self):
         new_action = input("[Type] New Action: ")
@@ -83,10 +77,13 @@ class EvalClient(threading.Thread):
             new_msg = self.receive_game_state()
 
     def send_encrypted_message(self):
-        json_message = json.dumps(self.message)
-        encrypted_message = self.encrypt_message(json_message)
-        msg_length = str(len(encrypted_message)) + "_"
-        self.client_out.send(msg_length.encode(FORMAT) + encrypted_message)
+        try:
+            json_message = json.dumps(self.message)
+            encrypted_message = self.encrypt_message(json_message)
+            msg_length = str(len(encrypted_message)) + "_"
+            self.client_out.send(msg_length.encode(FORMAT) + encrypted_message)
+        except Exception as err:
+            print(f"Error sending encrypted message: {err}")
 
     def update_game_state(self, new_action):
         self.message["p1"]["action"] = new_action
