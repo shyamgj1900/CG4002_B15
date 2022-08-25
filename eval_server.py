@@ -326,7 +326,6 @@ class Server(threading.Thread):
 
         cipher = AES.new(secret_key, AES.MODE_CBC, iv)                              # Create new AES cipher object
         decrypted_message = cipher.decrypt(decoded_message[AES.block_size:])  # Perform decryption
-        # (f"Decrypted Message: {decrypted_message.decode('utf8')} and length: {len(decrypted_message.decode('utf8'))}")
         decrypted_message = unpad(decrypted_message, AES.block_size)
         decrypted_message = decrypted_message.decode('utf8')  # Decode bytes into utf-8
 
