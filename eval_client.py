@@ -1,6 +1,8 @@
 import base64
 import json
 import socket
+import time
+import threading
 
 from Crypto import Random
 from Crypto.Util.Padding import pad
@@ -50,10 +52,40 @@ def decrypt_message(cipher_text):
     return ret
 
 
+def receive_game_state():
+    data = b''
+    while not data.endswith(b'_'):
+        _d = client_out.recv(1)
+        if not _d:
+            data = b''
+            break
+        data += _d
+    data = data.decode("utf-8")
+    length = int(data[:-1])
+    data = b''
+    while len(data) < length:
+        _d = client_out.recv(length - len(data))
+        if not _d:
+            data = b''
+            break
+        data += _d
+    msg = data.decode("utf8")
+    return json.loads(msg)
+
+
+def update_game_state(new_msg):
+    for key in message["p1"].keys():
+        message["p1"][key] = new_msg["p1"][key]
+
+    for key in message["p2"].keys():
+        message["p2"][key] = new_msg["p2"][key]
+
+
 def handle_eval_server():
     send_encrypted_message()
-    msg = client_out.recv(2048).decode(FORMAT)
-    print("Received msg: " + msg)
+    updated_msg = receive_game_state()
+    # new_action = input("Enter new action")
+    update_game_state(updated_msg)
 
 
 def send_encrypted_message():
@@ -65,7 +97,9 @@ def send_encrypted_message():
 
 def main():
     while True:
-        handle_eval_server()
+        thread = threading.Thread(target=handle_eval_server(), args=())
+        thread.start()
+        time.sleep(3)
 
 
 if __name__ == "__main__":
