@@ -3,6 +3,7 @@ import json
 import socket
 import sys
 import threading
+import time
 
 from Crypto import Random
 from Crypto.Util.Padding import pad
@@ -29,6 +30,14 @@ class EvalClient(threading.Thread):
         self.client_out = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.initSocketConnection()
         self.connected = True
+        self.new_time = 0
+        self.curr_time = 0
+        self.shield_time = 10
+        self.shield_active = False
+
+    def updateShieldTime(self):
+        self.curr_time = time.time() - self.new_time
+        self.shield_time -= self.curr_time
 
     def initSocketConnection(self):
         try:
@@ -43,6 +52,46 @@ class EvalClient(threading.Thread):
         cipher = AES.new(secret_key, AES.MODE_CBC, iv)
         encrypted_message = base64.b64encode(iv + cipher.encrypt(padded_raw_message))
         return encrypted_message
+
+    def update_game_state(self, new_action):
+        self.message["p1"]["action"] = new_action
+        if new_action == "shoot" and self.message["p1"]["bullets"] > 0:
+            self.message["p1"]["bullets"] -= 1
+            self.message["p2"]["hp"] -= 10
+            if self.message["p2"]["hp"] <= 0:
+                self.message["p2"]["hp"] = 100
+                self.message["p2"]["num_deaths"] += 1
+        elif new_action == "grenade" and self.message["p1"]["grenades"] > 0:
+            self.message["p1"]["grenades"] -= 1
+            self.message["p2"]["hp"] -= 30
+            if self.message["p2"]["hp"] <= 0:
+                self.message["p2"]["hp"] = 100
+                self.message["p2"]["num_deaths"] += 1
+        elif new_action == "shield" and self.message["p1"]["num_shield"] > 0 and self.shield_active is False:
+            self.new_time = time.time()
+            self.message["p1"]["num_shield"] -= 1
+            self.message["p1"]["shield_health"] = 30
+            self.shield_active = True
+        elif new_action == "reload" and self.message["p1"]["bullets"] == 0:
+            self.message["p1"]["bullets"] = 6
+
+        if self.shield_active is True:
+            self.updateShieldTime()
+            if self.shield_time > 0:
+                self.message["p1"]["shield_time"] = self.shield_time
+            elif self.shield_time <= 0:
+                self.shield_active = False
+                self.message["p1"]["shield_time"] = 0
+                self.message["p1"]["shield_health"] = 0
+
+    def send_encrypted_message(self):
+        try:
+            json_message = json.dumps(self.message)
+            encrypted_message = self.encrypt_message(json_message)
+            msg_length = str(len(encrypted_message)) + "_"
+            self.client_out.send(msg_length.encode(FORMAT) + encrypted_message)
+        except Exception as err:
+            print(f"Error sending encrypted message: {err}")
 
     def receive_game_state(self):
         try:
@@ -76,39 +125,15 @@ class EvalClient(threading.Thread):
             self.send_encrypted_message()
             new_msg = self.receive_game_state()
 
-    def send_encrypted_message(self):
-        try:
-            json_message = json.dumps(self.message)
-            encrypted_message = self.encrypt_message(json_message)
-            msg_length = str(len(encrypted_message)) + "_"
-            self.client_out.send(msg_length.encode(FORMAT) + encrypted_message)
-        except Exception as err:
-            print(f"Error sending encrypted message: {err}")
-
-    def update_game_state(self, new_action):
-        self.message["p1"]["action"] = new_action
-        if new_action == "shoot" and self.message["p1"]["bullets"] > 0:
-            self.message["p1"]["bullets"] -= 1
-            self.message["p2"]["hp"] -= 10
-            if self.message["p2"]["hp"] <= 0:
-                self.message["p2"]["hp"] = 100
-                self.message["p2"]["num_deaths"] += 1
-        elif new_action == "grenade" and self.message["p1"]["grenades"] > 0:
-            self.message["p1"]["grenades"] -= 1
-            self.message["p2"]["hp"] -= 30
-            if self.message["p2"]["hp"] <= 0:
-                self.message["p2"]["hp"] = 100
-                self.message["p2"]["num_deaths"] += 1
-        elif new_action == "shield" and self.message["p1"]["num_shield"] > 0:
-            self.message["p1"]["num_shield"] -= 1
-        elif new_action == "reload" and self.message["p1"]["bullets"] == 0:
-            self.message["p1"]["bullets"] = 6
-
     def run(self):
         while self.connected:
             self.handle_eval_server()
         if not self.connected:
             sys.exit()
+
+
+def getCurrentTime():
+    return time.time()
 
 
 def main():
