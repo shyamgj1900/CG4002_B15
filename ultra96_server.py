@@ -21,12 +21,18 @@ class Ultra96Server(threading.Thread):
         if self.message == "logout":
             sys.exit()
 
+    def get_new_message(self):
+        return self.message
+
+    def run(self):
+        self.init_socket_connection()
+        while True:
+            self.receive_message()
+
 
 def main():
     u96_server = Ultra96Server()
-    u96_server.init_socket_connection()
-    while True:
-        u96_server.receive_message()
+    u96_server.start()
 
 
 if __name__ == "__main__":

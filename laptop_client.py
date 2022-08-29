@@ -23,12 +23,14 @@ class LaptopClient(threading.Thread):
             message = message.decode("utf8")
             print(message)
 
+    def run(self):
+        self.init_socket_connection()
+        self.send_message()
+
 
 def main():
     lp_client = LaptopClient()
-    lp_client.init_socket_connection()
-    lp_client.send_message()
-    sys.exit()
+    lp_client.start()
 
 
 if __name__ == "__main__":
