@@ -28,18 +28,18 @@ class EvalClient(threading.Thread):
             'p2': {'hp': 100, 'action': 'none', 'bullets': 6, 'grenades': 2, 'shield_time': 0, 'shield_health': 0,
                    'num_deaths': 0, 'num_shield': 3}}
         self.client_out = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.initSocketConnection()
+        self.init_socket_connection()
         self.connected = True
         self.new_time = 0
         self.curr_time = 0
         self.shield_time = 10
         self.shield_active = False
 
-    def updateShieldTime(self):
+    def update_shield_time(self):
         self.curr_time = time.time() - self.new_time
         self.shield_time -= self.curr_time
 
-    def initSocketConnection(self):
+    def init_socket_connection(self):
         try:
             self.client_out.connect(ADDR_OUT)
         except socket.error as err:
@@ -76,7 +76,7 @@ class EvalClient(threading.Thread):
             self.message["p1"]["bullets"] = 6
 
         if self.shield_active is True:
-            self.updateShieldTime()
+            self.update_shield_time()
             if self.shield_time > 0:
                 self.message["p1"]["shield_time"] = self.shield_time
             elif self.shield_time <= 0:
@@ -132,7 +132,7 @@ class EvalClient(threading.Thread):
             sys.exit()
 
 
-def getCurrentTime():
+def get_current_time():
     return time.time()
 
 

@@ -1,44 +1,23 @@
-import socket
-import threading
+#
+#   Hello World server in Python
+#   Binds REP socket to tcp://*:5555
+#   Expects b"Hello" from client, replies with b"World"
+#
 
-HEADER = 64
-PORT = 5050
-SERVER = socket.gethostbyname(socket.gethostname())
-ADDR = (SERVER, PORT)
-FORMAT = 'utf-8'
-DISCONNECT_MESSAGE = "!DISCONNECT"
+import time
+import zmq
 
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.bind(ADDR)
+context = zmq.Context()
+socket = context.socket(zmq.REP)
+socket.bind("tcp://*:5555")
 
+while True:
+    #  Wait for next request from client
+    message = socket.recv()
+    print(f"Received request: {message}")
 
-def handle_client(conn, addr):
-    print(f"[NEW CONNECTION] {addr} connected.")
+    #  Do some 'work'
+    time.sleep(1)
 
-    connected = True
-    while connected:
-        msg_length = conn.recv(HEADER).decode(FORMAT)
-        if msg_length:
-            msg_length = int(msg_length)
-            msg = conn.recv(msg_length).decode(FORMAT)
-            if msg == DISCONNECT_MESSAGE:
-                connected = False
-
-            print(f"[{addr}] {msg}")
-            conn.send("Msg received".encode(FORMAT))
-
-    conn.close()
-
-
-def start():
-    server.listen()
-    print(f"[LISTENING] Server is listening on {SERVER}")
-    while True:
-        conn, addr = server.accept()
-        thread = threading.Thread(target=handle_client, args=(conn, addr))
-        thread.start()
-        print(f"[ACTIVE CONNECTIONS] {threading.activeCount() - 1}")
-
-
-print("[STARTING] server is starting...")
-start()
+    #  Send reply back to client
+    socket.send(b"World")
