@@ -1,7 +1,6 @@
 import base64
 import json
 import socket
-import sys
 import threading
 import time
 
@@ -116,20 +115,14 @@ class EvalClient(threading.Thread):
         except Exception as err:
             print(f"Error receiving message from eval server: {err}")
 
-    def handle_eval_server(self):
-        new_action = input("[Type] New Action: ")
+    def handle_eval_server(self, new_action):
+        # new_action = input("[Type] New Action: ")
         if new_action == "logout":
             self.connected = False
         else:
             self.update_game_state(new_action)
             self.send_encrypted_message()
             new_msg = self.receive_game_state()
-
-    def run(self):
-        while self.connected:
-            self.handle_eval_server()
-        if not self.connected:
-            sys.exit()
 
 
 def get_current_time():
