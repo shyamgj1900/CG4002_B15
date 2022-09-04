@@ -1,7 +1,7 @@
-import sys
 import threading
 import zmq
 from sshtunnel import SSHTunnelForwarder
+from getpass import getpass
 
 
 class LaptopClient(threading.Thread):
@@ -11,7 +11,7 @@ class LaptopClient(threading.Thread):
         self.socket = self.context.socket(zmq.REQ)
         self.sunfire_ssh_addr = "sunfire.comp.nus.edu.sg"
         self.sunfire_ssh_username = "shyam"
-        self.sunfire_ssh_password = "yscd100Plus3/1"
+        self.sunfire_ssh_password = ""
         self.ultra96_ssh_addr = "192.168.95.239"
         self.ultra96_ssh_username = "xilinx"
         self.ultra96_ssh_password = "xilinx"
@@ -47,8 +47,7 @@ class LaptopClient(threading.Thread):
     def init_socket_connection(self):
         #  Socket to talk to server
         print("Connecting to Ultra96 server…")
-        self.socket.connect("tcp://127.0.0.1:" + str(self.tunnels[-1].local_bind_port))
-        # self.socket.connect("tcp://127.0.0.1:5550")
+        self.socket.connect("tcp://127.0.0.1:" + str(self.tunnels[1].local_bind_port))
 
     def send_message(self):
         while True:
@@ -65,6 +64,7 @@ class LaptopClient(threading.Thread):
         print("BYE......")
 
     def run(self):
+        self.sunfire_ssh_password = getpass()
         self.start_tunnels()
         self.init_socket_connection()
         self.send_message()
