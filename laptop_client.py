@@ -52,12 +52,12 @@ class LaptopClient(threading.Thread):
     def send_message(self):
         while True:
             new_action = input("[Type] New Action: ")
-            new_action = new_action.encode("utf8")
-            self.socket.send(new_action)
+            new_action_encode = new_action.encode("utf8")
+            self.socket.send(new_action_encode)
             message = self.socket.recv()
             message = message.decode("utf8")
             print(message)
-            if new_action.decode("utf8") == "logout":
+            if new_action == "logout":
                 break
         self.socket.close()
         self.stop_tunnels()
