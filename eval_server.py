@@ -456,7 +456,7 @@ class Eval:
         self.server.start()
 
         # Initialize base window
-        self.display_window = tk.Tk()
+        # self.display_window = tk.Tk()
 
     def check_loop_status(self):
         """
