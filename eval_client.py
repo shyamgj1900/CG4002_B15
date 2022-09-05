@@ -35,24 +35,40 @@ class EvalClient(threading.Thread):
         self.shield_active = False
 
     def update_shield_time(self):
+        """
+        This function updates the shield time when it is active.
+        """
         self.curr_time = time.time() - self.new_time
         self.shield_time -= self.curr_time
 
     def init_socket_connection(self):
+        """
+        This function connects the client to the eval server.
+        """
         try:
             self.client_out.connect(ADDR_OUT)
         except socket.error as err:
             print("Socket error: " + str(err))
 
     def encrypt_message(self, msg):
-        padded_raw_message = pad(msg.encode(FORMAT), 16)
-        iv = Random.new().read(AES.block_size)
-        secret_key = bytes(str(self.SECRET_KEY), encoding="utf8")
-        cipher = AES.new(secret_key, AES.MODE_CBC, iv)
-        encrypted_message = base64.b64encode(iv + cipher.encrypt(padded_raw_message))
-        return encrypted_message
+        """
+        This function encrypts the response message which is to be sent to the Ultra96 using the secret encryption key.
+        """
+        try:
+            padded_raw_message = pad(msg.encode(FORMAT), 16)
+            iv = Random.new().read(AES.block_size)
+            secret_key = bytes(str(self.SECRET_KEY), encoding="utf8")
+            cipher = AES.new(secret_key, AES.MODE_CBC, iv)
+            encrypted_message = base64.b64encode(iv + cipher.encrypt(padded_raw_message))
+            return encrypted_message
+        except Exception as e:
+            print(f"Could not encrypt message due to {e}")
 
     def update_game_state(self, new_action):
+        """
+        This function updates the players game state based on the action it has received from the client side. (For now
+        this function only updates game state based on 1 player mode).
+        """
         self.message["p1"]["action"] = new_action
         if new_action == "shoot" and self.message["p1"]["bullets"] > 0:
             self.message["p1"]["bullets"] -= 1
@@ -84,6 +100,10 @@ class EvalClient(threading.Thread):
                 self.message["p1"]["shield_health"] = 0
 
     def send_encrypted_message(self):
+        """
+        This function takes the message which is a dictionary and converts it to JSON format which will then by
+        encrypted and then sends the message through sockets.
+        """
         try:
             json_message = json.dumps(self.message)
             encrypted_message = self.encrypt_message(json_message)
@@ -116,23 +136,8 @@ class EvalClient(threading.Thread):
             print(f"Error receiving message from eval server: {err}")
 
     def handle_eval_server(self, new_action):
-        # new_action = input("[Type] New Action: ")
-        if new_action == "logout":
-            self.connected = False
-        else:
-            self.update_game_state(new_action)
-            self.send_encrypted_message()
-            new_msg = self.receive_game_state()
-
-
-def get_current_time():
-    return time.time()
-
-
-def main():
-    my_client = EvalClient()
-    my_client.start()
-
-
-if __name__ == "__main__":
-    main()
+        """
+        This function updates the game state and sends the encrypted JSON message.
+        """
+        self.update_game_state(new_action)
+        self.send_encrypted_message()

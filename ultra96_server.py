@@ -14,18 +14,34 @@ class Ultra96Server(threading.Thread):
         self.eval_client = EvalClient()
 
     def init_socket_connection(self):
-        self.socket.bind("tcp://*:5550")
+        """
+        This function initialises the message queue connection.
+        """
+        try:
+            self.socket.bind("tcp://*:5550")
+        except Exception as e:
+            print(f"Socket err: {e}")
 
     def receive_message(self):
-        self.message = self.socket.recv()
-        self.message = self.message.decode("utf8")
-        print(f"Received Message: {self.message}")
-        self.socket.send(b"ACK")
-        if self.message == "logout":
-            sys.exit()
-        self.eval_client.handle_eval_server(self.message)
+        """
+        This function receives a message from the laptop client through message queues and sends an ACK message back to
+        the laptop client.
+        """
+        try:
+            self.message = self.socket.recv()
+            self.message = self.message.decode("utf8")
+            print(f"Received Message: {self.message}")
+            self.socket.send(b"ACK")
+            if self.message == "logout":
+                sys.exit()
+            self.eval_client.handle_eval_server(self.message)
+        except Exception as e:
+            print(f"Error receiving message: {e}")
 
     def run(self):
+        """
+        This is the main thread for the Ultra96 server.
+        """
         self.init_socket_connection()
         while True:
             self.receive_message()
