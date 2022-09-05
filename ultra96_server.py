@@ -18,6 +18,7 @@ class Ultra96Server(threading.Thread):
         This function initialises the message queue connection.
         """
         try:
+            print("Establishing connection through port 5550")
             self.socket.bind("tcp://*:5550")
         except Exception as e:
             print(f"Socket err: {e}")
@@ -33,6 +34,7 @@ class Ultra96Server(threading.Thread):
             print(f"Received Message: {self.message}")
             self.socket.send(b"ACK")
             if self.message == "logout":
+                print("Disconnecting BYE...")
                 sys.exit()
             self.eval_client.handle_eval_server(self.message)
         except Exception as e:
