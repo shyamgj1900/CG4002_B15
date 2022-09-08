@@ -1,7 +1,6 @@
 import base64
 import json
 import socket
-import threading
 import time
 
 from Crypto import Random
@@ -16,10 +15,8 @@ DISCONNECT_MSG = "!DISCONNECT"
 ADDR_OUT = (IP_SERVER, PORT_OUT)
 
 
-class EvalClient(threading.Thread):
+class EvalClient:
     def __init__(self):
-        super(EvalClient, self).__init__()
-
         self.SECRET_KEY = "PLSPLSPLSPLSWORK"
         self.message = {
             'p1': {'hp': 100, 'action': 'none', 'bullets': 6, 'grenades': 2, 'shield_time': 0, 'shield_health': 0,

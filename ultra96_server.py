@@ -2,7 +2,9 @@ import sys
 import threading
 import zmq
 
+
 from eval_client import EvalClient
+from visualizer_broadcast import VisualizerBroadcast
 
 
 class Ultra96Server(threading.Thread):
@@ -12,10 +14,11 @@ class Ultra96Server(threading.Thread):
         self.socket = self.context.socket(zmq.REP)
         self.message = ""
         self.eval_client = EvalClient()
+        self.visualizer_publish = VisualizerBroadcast()
 
     def init_socket_connection(self):
         """
-        This function initialises the message queue connection.
+        This function initialises the socket connection.
         """
         try:
             print("Establishing connection through port 5550")
@@ -23,7 +26,7 @@ class Ultra96Server(threading.Thread):
         except Exception as e:
             print(f"Socket err: {e}")
 
-    def receive_message(self):
+    def receive_message_from_laptop(self):
         """
         This function receives a message from the laptop client through message queues and sends an ACK message back to
         the laptop client.
@@ -36,9 +39,13 @@ class Ultra96Server(threading.Thread):
             if self.message == "logout":
                 print("Disconnecting BYE...")
                 sys.exit()
-            self.eval_client.handle_eval_server(self.message)
+            self.send_messages()
         except Exception as e:
             print(f"Error receiving message: {e}")
+
+    def send_messages(self):
+        self.eval_client.handle_eval_server(self.message)
+        self.visualizer_publish.publish_message(self.message)
 
     def run(self):
         """
@@ -46,7 +53,7 @@ class Ultra96Server(threading.Thread):
         """
         self.init_socket_connection()
         while True:
-            self.receive_message()
+            self.receive_message_from_laptop()
 
 
 def main():

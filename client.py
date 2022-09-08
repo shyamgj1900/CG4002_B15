@@ -1,23 +1,38 @@
-#
-#   Hello World client in Python
-#   Connects REQ socket to tcp://localhost:5555
-#   Sends "Hello" to server, expects "World" back
-#
+import paho.mqtt.client as mqtt
+import random
+import time
 
-import zmq
+broker_address = "b1386744d1594b29a88d72d9bab70fbe.s1.eu.hivemq.cloud"
 
-context = zmq.Context()
+username = "cg4002_b15"
+password = "CG4002_B15"
 
-#  Socket to talk to server
-print("Connecting to hello world server…")
-socket = context.socket(zmq.REQ)
-socket.connect("tcp://localhost:5555")
+topic = "Sensor/Temperature/TMP1"
 
-#  Do 10 requests, waiting each time for a response
-for request in range(10):
-    print(f"Sending request {request} …")
-    socket.send(b"Hello")
 
-    #  Get the reply.
-    message = socket.recv()
-    print(f"Received reply {request} [ {message} ]")
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print("Connected")
+    else:
+        print(f"Connection failed, RC err: {rc}")
+
+
+def on_message(client, userdata, msg):
+    print("Received Message: " + msg.topic + "->" + msg.payload.decode("utf-8"))
+
+
+client = mqtt.Client()
+client.on_connect = on_connect
+client.on_message = on_message
+
+client.tls_set(tls_version=mqtt.ssl.PROTOCOL_TLS)
+client.username_pw_set(username, password)
+client.connect(broker_address, 8883)
+
+wait = 3
+while True:
+    data = random.randint(20, 30)
+    print(data)
+    client.publish(topic, data)
+    time.sleep(wait)
+
