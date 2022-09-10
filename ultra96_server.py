@@ -2,9 +2,12 @@ import sys
 import threading
 import zmq
 
-
 from eval_client import EvalClient
 from visualizer_broadcast import VisualizerBroadcast
+
+eval_message_event = threading.Event()
+visualizer_message_event = threading.Event()
+message = ""
 
 
 class Ultra96Server(threading.Thread):
@@ -12,9 +15,6 @@ class Ultra96Server(threading.Thread):
         super(Ultra96Server, self).__init__()
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REP)
-        self.message = ""
-        self.eval_client = EvalClient()
-        self.visualizer_publish = VisualizerBroadcast()
 
     def init_socket_connection(self):
         """
@@ -31,21 +31,18 @@ class Ultra96Server(threading.Thread):
         This function receives a message from the laptop client through message queues and sends an ACK message back to
         the laptop client.
         """
+        global message
         try:
-            self.message = self.socket.recv()
-            self.message = self.message.decode("utf8")
-            print(f"Received Message: {self.message}")
+            message = self.socket.recv()
+            message = message.decode("utf8")
+            print(f"Received Message: {message}")
             self.socket.send(b"ACK")
-            if self.message == "logout":
+            if message == "logout":
                 print("Disconnecting BYE...")
                 sys.exit()
-            self.send_messages()
+            # self.send_messages()
         except Exception as e:
             print(f"Error receiving message: {e}")
-
-    def send_messages(self):
-        self.eval_client.handle_eval_server(self.message)
-        self.visualizer_publish.publish_message(self.message)
 
     def run(self):
         """
@@ -54,11 +51,45 @@ class Ultra96Server(threading.Thread):
         self.init_socket_connection()
         while True:
             self.receive_message_from_laptop()
+            eval_message_event.set()
+            visualizer_message_event.set()
+
+
+class CommWithEvalServer(threading.Thread):
+    def __init__(self):
+        super(CommWithEvalServer, self).__init__()
+        self.eval_client = EvalClient()
+
+    def run(self):
+        global message
+        while True:
+            message_received = eval_message_event.wait()
+            if message_received:
+                self.eval_client.handle_eval_server(message)
+                event.clear()
+
+
+class CommWithVisualizer(threading.Thread):
+    def __init__(self):
+        super(CommWithVisualizer, self).__init__()
+        self.visualizer_publish = VisualizerBroadcast()
+
+    def run(self):
+        global message
+        while True:
+            message_received = visualizer_message_event.wait()
+            if message_received:
+                self.visualizer_publish.publish_message(message)
+                visualizer_message_event.clear()
 
 
 def main():
     u96_server = Ultra96Server()
+    comm_eval_server = CommWithEvalServer()
+    comm_visualizer = CommWithVisualizer()
     u96_server.start()
+    comm_eval_server.start()
+    comm_visualizer.start()
 
 
 if __name__ == "__main__":
