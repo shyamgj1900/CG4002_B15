@@ -7,6 +7,7 @@ from visualizer_broadcast import VisualizerBroadcast
 
 eval_message_event = threading.Event()
 visualizer_message_event = threading.Event()
+exit_event = threading.Event()
 message = ""
 
 
@@ -39,8 +40,7 @@ class Ultra96Server(threading.Thread):
             self.socket.send(b"ACK")
             if message == "logout":
                 print("Disconnecting BYE...")
-                sys.exit()
-            # self.send_messages()
+                exit_event.set()
         except Exception as e:
             print(f"Error receiving message: {e}")
 
@@ -49,7 +49,7 @@ class Ultra96Server(threading.Thread):
         This is the main thread for the Ultra96 server.
         """
         self.init_socket_connection()
-        while True:
+        while not exit_event.is_set():
             self.receive_message_from_laptop()
             eval_message_event.set()
             visualizer_message_event.set()
@@ -62,11 +62,11 @@ class CommWithEvalServer(threading.Thread):
 
     def run(self):
         global message
-        while True:
+        while not exit_event.is_set():
             message_received = eval_message_event.wait()
             if message_received:
                 self.eval_client.handle_eval_server(message)
-                event.clear()
+                eval_message_event.clear()
 
 
 class CommWithVisualizer(threading.Thread):
@@ -86,10 +86,10 @@ class CommWithVisualizer(threading.Thread):
 def main():
     u96_server = Ultra96Server()
     comm_eval_server = CommWithEvalServer()
-    comm_visualizer = CommWithVisualizer()
+    # comm_visualizer = CommWithVisualizer()
     u96_server.start()
     comm_eval_server.start()
-    comm_visualizer.start()
+    # comm_visualizer.start()
 
 
 if __name__ == "__main__":
