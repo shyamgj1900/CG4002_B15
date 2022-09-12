@@ -1,0 +1,116 @@
+{
+  "version": 3,
+  "targets": {
+    ".NETCoreApp,Version=v3.1": {
+      "MQTTnet/4.1.0.247": {
+        "type": "package",
+        "compile": {
+          "lib/netcoreapp3.1/MQTTnet.dll": {}
+        },
+        "runtime": {
+          "lib/netcoreapp3.1/MQTTnet.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "MQTTnet/4.1.0.247": {
+      "sha512": "Qlhj/+7AYQp0mEdisvRDAQWrpSXQ3gRa/T2XygNO4zOnk94cvamHzV/7OFLLDLNkGX7iDmFUnY5x+hIb/5HrKg==",
+      "type": "package",
+      "path": "mqttnet/4.1.0.247",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net452/MQTTnet.dll",
+        "lib/net452/MQTTnet.xml",
+        "lib/net461/MQTTnet.dll",
+        "lib/net461/MQTTnet.xml",
+        "lib/net5.0/MQTTnet.dll",
+        "lib/net5.0/MQTTnet.xml",
+        "lib/net6.0/MQTTnet.dll",
+        "lib/net6.0/MQTTnet.xml",
+        "lib/netcoreapp3.1/MQTTnet.dll",
+        "lib/netcoreapp3.1/MQTTnet.xml",
+        "lib/netstandard1.3/MQTTnet.dll",
+        "lib/netstandard1.3/MQTTnet.xml",
+        "lib/netstandard2.0/MQTTnet.dll",
+        "lib/netstandard2.0/MQTTnet.xml",
+        "lib/netstandard2.1/MQTTnet.dll",
+        "lib/netstandard2.1/MQTTnet.xml",
+        "lib/uap10.0.10240/MQTTnet.dll",
+        "lib/uap10.0.10240/MQTTnet.pri",
+        "lib/uap10.0.10240/MQTTnet.xml",
+        "mqttnet.4.1.0.247.nupkg.sha512",
+        "mqttnet.nuspec",
+        "nuget.png"
+      ]
+    }
+  },
+  "projectFileDependencyGroups": {
+    ".NETCoreApp,Version=v3.1": [
+      "MQTTnet >= 4.1.0.247"
+    ]
+  },
+  "packageFolders": {
+    "/Users/shyam/.nuget/packages/": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "/Users/shyam/Projects/MQTTsub/MQTTsubscriber/MQTTsubscriber.csproj",
+      "projectName": "MQTTsubscriber",
+      "projectPath": "/Users/shyam/Projects/MQTTsub/MQTTsubscriber/MQTTsubscriber.csproj",
+      "packagesPath": "/Users/shyam/.nuget/packages/",
+      "outputPath": "/Users/shyam/Projects/MQTTsub/MQTTsubscriber/obj/",
+      "projectStyle": "PackageReference",
+      "configFilePaths": [
+        "/Users/shyam/.nuget/NuGet/NuGet.Config"
+      ],
+      "originalTargetFrameworks": [
+        "netcoreapp3.1"
+      ],
+      "sources": {
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "netcoreapp3.1": {
+          "targetAlias": "netcoreapp3.1",
+          "projectReferences": {}
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      }
+    },
+    "frameworks": {
+      "netcoreapp3.1": {
+        "targetAlias": "netcoreapp3.1",
+        "dependencies": {
+          "MQTTnet": {
+            "target": "Package",
+            "version": "[4.1.0.247, )"
+          }
+        },
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/6.0.400/RuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}

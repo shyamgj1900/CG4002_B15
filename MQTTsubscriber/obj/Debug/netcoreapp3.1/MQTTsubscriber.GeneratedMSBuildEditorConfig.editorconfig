@@ -1,0 +1,3 @@
+is_global = true
+build_property.RootNamespace = MQTTsubscriber
+build_property.ProjectDir = /Users/shyam/Projects/MQTTsub/MQTTsubscriber/

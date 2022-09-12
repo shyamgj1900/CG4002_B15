@@ -9,10 +9,10 @@ class LaptopClient(threading.Thread):
         super(LaptopClient, self).__init__()
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REQ)
-        self.sunfire_ssh_addr = "sunfire.comp.nus.edu.sg"
+        self.sunfire_ssh_addr = "stu.comp.nus.edu.sg"
         self.sunfire_ssh_username = "shyam"
         self.sunfire_ssh_password = ""
-        self.ultra96_ssh_addr = "192.168.95.239"
+        self.ultra96_ssh_addr = "192.168.95.247"
         self.ultra96_ssh_username = "xilinx"
         self.ultra96_ssh_password = "xilinx"
         self.tunnels = []
@@ -21,7 +21,7 @@ class LaptopClient(threading.Thread):
         """
         This function starts the ssh tunnel to connect the client laptop to the Ultra96.
         """
-        # First connection to sunfire
+        # First connection to stu
         self.tunnels.append(SSHTunnelForwarder(remote_bind_address=(self.ultra96_ssh_addr, 22),
                                                ssh_address_or_host=self.sunfire_ssh_addr,
                                                ssh_username=self.sunfire_ssh_username,

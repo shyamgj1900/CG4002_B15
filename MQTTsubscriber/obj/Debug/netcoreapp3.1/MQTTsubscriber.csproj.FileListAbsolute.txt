@@ -1,0 +1,16 @@
+/Users/shyam/Projects/MQTTsub/MQTTsubscriber/bin/Debug/netcoreapp3.1/MQTTsubscriber
+/Users/shyam/Projects/MQTTsub/MQTTsubscriber/bin/Debug/netcoreapp3.1/MQTTsubscriber.deps.json
+/Users/shyam/Projects/MQTTsub/MQTTsubscriber/bin/Debug/netcoreapp3.1/MQTTsubscriber.runtimeconfig.json
+/Users/shyam/Projects/MQTTsub/MQTTsubscriber/bin/Debug/netcoreapp3.1/MQTTsubscriber.runtimeconfig.dev.json
+/Users/shyam/Projects/MQTTsub/MQTTsubscriber/bin/Debug/netcoreapp3.1/MQTTsubscriber.dll
+/Users/shyam/Projects/MQTTsub/MQTTsubscriber/bin/Debug/netcoreapp3.1/MQTTsubscriber.pdb
+/Users/shyam/Projects/MQTTsub/MQTTsubscriber/bin/Debug/netcoreapp3.1/MQTTnet.dll
+/Users/shyam/Projects/MQTTsub/MQTTsubscriber/obj/Debug/netcoreapp3.1/MQTTsubscriber.csproj.AssemblyReference.cache
+/Users/shyam/Projects/MQTTsub/MQTTsubscriber/obj/Debug/netcoreapp3.1/MQTTsubscriber.GeneratedMSBuildEditorConfig.editorconfig
+/Users/shyam/Projects/MQTTsub/MQTTsubscriber/obj/Debug/netcoreapp3.1/MQTTsubscriber.AssemblyInfoInputs.cache
+/Users/shyam/Projects/MQTTsub/MQTTsubscriber/obj/Debug/netcoreapp3.1/MQTTsubscriber.AssemblyInfo.cs
+/Users/shyam/Projects/MQTTsub/MQTTsubscriber/obj/Debug/netcoreapp3.1/MQTTsubscriber.csproj.CoreCompileInputs.cache
+/Users/shyam/Projects/MQTTsub/MQTTsubscriber/obj/Debug/netcoreapp3.1/MQTTsubscriber.csproj.CopyComplete
+/Users/shyam/Projects/MQTTsub/MQTTsubscriber/obj/Debug/netcoreapp3.1/MQTTsubscriber.dll
+/Users/shyam/Projects/MQTTsub/MQTTsubscriber/obj/Debug/netcoreapp3.1/MQTTsubscriber.pdb
+/Users/shyam/Projects/MQTTsub/MQTTsubscriber/obj/Debug/netcoreapp3.1/MQTTsubscriber.genruntimeconfig.cache
