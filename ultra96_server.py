@@ -76,7 +76,7 @@ class CommWithVisualizer(threading.Thread):
 
     def run(self):
         global message
-        while True:
+        while not exit_event.is_set():
             message_received = visualizer_message_event.wait()
             if message_received:
                 self.visualizer_publish.publish_message(message)
@@ -86,10 +86,10 @@ class CommWithVisualizer(threading.Thread):
 def main():
     u96_server = Ultra96Server()
     comm_eval_server = CommWithEvalServer()
-    # comm_visualizer = CommWithVisualizer()
+    comm_visualizer = CommWithVisualizer()
     u96_server.start()
     comm_eval_server.start()
-    # comm_visualizer.start()
+    comm_visualizer.start()
 
 
 if __name__ == "__main__":
