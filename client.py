@@ -18,7 +18,7 @@ def on_connect(client, userdata, flags, rc):
 
 
 def on_message(client, userdata, msg):
-    print("Received Message: " + msg.topic + "->" + msg.payload.decode("utf-8"))
+    print("Received Message: " + msg.topic_visualizer_receive + "->" + msg.payload.decode("utf-8"))
 
 
 client = mqtt.Client()

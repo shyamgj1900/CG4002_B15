@@ -5,7 +5,7 @@ broker_address = "b1386744d1594b29a88d72d9bab70fbe.s1.eu.hivemq.cloud"
 username = "cg4002_b15"
 password = "CG4002_B15"
 
-topic = "Ultra96/visualizer"
+topic = "Ultra96/visualizer/send"
 
 
 def on_connect(client, userdata, flags, rc):
@@ -19,6 +19,10 @@ def on_message(client, userdata, msg):
     print("Received Message: " + msg.topic + "->" + msg.payload.decode("utf-8"))
 
 
+def publish_message(message):
+    client.publish("Ultra96/visualizer/receive", message)
+
+
 client = mqtt.Client()
 client.on_connect = on_connect
 client.on_message = on_message
@@ -29,6 +33,10 @@ client.connect(broker_address, 8883)
 
 client.subscribe(topic)
 
-client.loop_forever()
+while True:
+    client.loop_start()
+    action = input("type: ")
+    publish_message(action)
+
 
 

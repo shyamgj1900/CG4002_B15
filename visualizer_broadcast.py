@@ -12,7 +12,7 @@ class VisualizerBroadcast(threading.Thread):
         self.broker_address = "b1386744d1594b29a88d72d9bab70fbe.s1.eu.hivemq.cloud"
         self.username = "cg4002_b15"
         self.password = "CG4002_B15"
-        self.topic = "Ultra96/visualizer"
+        self.topic = "Ultra96/visualizer/receive"
         self.init_message_queue_connection()
 
     def init_message_queue_connection(self):
