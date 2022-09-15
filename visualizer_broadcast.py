@@ -1,11 +1,10 @@
-import random
 import time
-
 import paho.mqtt.client as mqtt
 import threading
 from queue import Queue
 
 q = Queue()
+
 
 class VisualizerBroadcast(threading.Thread):
     def __init__(self):
@@ -37,7 +36,6 @@ class VisualizerBroadcast(threading.Thread):
 
     @staticmethod
     def on_message(client, userdata, msg):
-        # print("Received Message: " + msg.topic + "->" + msg.payload.decode("utf-8"))
         q.put(msg)
 
     @staticmethod
@@ -56,5 +54,7 @@ class VisualizerBroadcast(threading.Thread):
 #     vis_broad = VisualizerBroadcast()
 #     while True:
 #         data = input("type: ")
-#         print(data)
 #         vis_broad.publish_message(data)
+#         if data == "grenade":
+#            time.sleep(1)
+#            vis_broad.receive_message()
