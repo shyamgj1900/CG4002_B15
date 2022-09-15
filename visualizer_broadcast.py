@@ -3,7 +3,9 @@ import time
 
 import paho.mqtt.client as mqtt
 import threading
+from queue import Queue
 
+q = Queue()
 
 class VisualizerBroadcast(threading.Thread):
     def __init__(self):
@@ -12,7 +14,8 @@ class VisualizerBroadcast(threading.Thread):
         self.broker_address = "b1386744d1594b29a88d72d9bab70fbe.s1.eu.hivemq.cloud"
         self.username = "cg4002_b15"
         self.password = "CG4002_B15"
-        self.topic = "Ultra96/visualizer/receive"
+        self.topic_viz_recv = "Ultra96/visualizer/receive"
+        self.topic_viz_send = "Ultra96/visualizer/send"
         self.init_message_queue_connection()
 
     def init_message_queue_connection(self):
@@ -22,6 +25,8 @@ class VisualizerBroadcast(threading.Thread):
         self.publisher.tls_set(tls_version=mqtt.ssl.PROTOCOL_TLS)
         self.publisher.username_pw_set(self.username, self.password)
         self.publisher.connect(self.broker_address, 8883)
+        self.publisher.subscribe(self.topic_viz_send)
+        self.publisher.loop_start()
 
     @staticmethod
     def on_connect(client, userdata, flags, rc):
@@ -32,10 +37,19 @@ class VisualizerBroadcast(threading.Thread):
 
     @staticmethod
     def on_message(client, userdata, msg):
-        print("Received Message: " + msg.topic + "->" + msg.payload.decode("utf-8"))
+        # print("Received Message: " + msg.topic + "->" + msg.payload.decode("utf-8"))
+        q.put(msg)
+
+    @staticmethod
+    def receive_message():
+        while not q.empty():
+            message = q.get()
+            if message is None:
+                continue
+            print("Received from visualizer", str(message.payload.decode("utf-8")))
 
     def publish_message(self, message):
-        self.publisher.publish(self.topic, message)
+        self.publisher.publish(self.topic_viz_recv, message)
 
 
 # if __name__ == "__main__":

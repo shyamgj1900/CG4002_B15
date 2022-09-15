@@ -1,3 +1,4 @@
+import time
 import sys
 import threading
 import zmq
@@ -80,6 +81,9 @@ class CommWithVisualizer(threading.Thread):
             message_received = visualizer_message_event.wait()
             if message_received:
                 self.visualizer_publish.publish_message(message)
+                if message == "grenade":
+                    time.sleep(1)
+                    self.visualizer_publish.receive_message()
                 visualizer_message_event.clear()
 
 
