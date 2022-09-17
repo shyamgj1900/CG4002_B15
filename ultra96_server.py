@@ -1,6 +1,8 @@
 import time
 import threading
 import zmq
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
 
 from eval_client import EvalClient
 from visualizer_broadcast import VisualizerBroadcast
@@ -34,7 +36,8 @@ class Ultra96Server(threading.Thread):
         """
         global message
         try:
-            message = self.socket.recv()
+            padded_message = self.socket.recv()
+            message = unpad(padded_message, AES.block_size)
             message = message.decode("utf8")
             print(f"Received Message: {message}")
             self.socket.send(b"ACK")
