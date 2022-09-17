@@ -2,6 +2,8 @@ import threading
 import zmq
 from sshtunnel import SSHTunnelForwarder
 from getpass import getpass
+from Crypto.Util.Padding import pad
+from Crypto.Cipher import AES
 
 
 class LaptopClient(threading.Thread):
@@ -67,7 +69,8 @@ class LaptopClient(threading.Thread):
             # Get new action input from user
             new_action = input("[Type] New Action: ")
             new_action_encode = new_action.encode("utf8")
-            self.socket.send(new_action_encode)
+            new_action_padded_message = pad(new_action_encode, AES.block_size)
+            self.socket.send(new_action_padded_message)
             # Receive ACK message from server
             message = self.socket.recv()
             message = message.decode("utf8")

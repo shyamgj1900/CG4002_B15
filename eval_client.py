@@ -52,7 +52,7 @@ class EvalClient:
         This function encrypts the response message which is to be sent to the Ultra96 using the secret encryption key.
         """
         try:
-            padded_raw_message = pad(msg.encode(FORMAT), 16)
+            padded_raw_message = pad(msg.encode(FORMAT), AES.block_size)
             iv = Random.new().read(AES.block_size)
             secret_key = bytes(str(self.SECRET_KEY), encoding="utf8")
             cipher = AES.new(secret_key, AES.MODE_CBC, iv)
