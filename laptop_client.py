@@ -71,7 +71,7 @@ class LaptopClient(threading.Thread):
             new_action_encode = new_action.encode("utf8")
             new_action_padded_message = pad(new_action_encode, AES.block_size)
             self.socket.send(new_action_padded_message)
-            # Receive ACK message from server
+            # Receive acknowledge message
             message = self.socket.recv()
             message = message.decode("utf8")
             print(message)
