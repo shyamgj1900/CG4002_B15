@@ -1,7 +1,7 @@
 import time
 
-from PlayerState import PlayerStateBase
-from Helper import Actions
+from eval_server.PlayerState import PlayerStateBase
+from eval_server.Helper import Actions
 
 
 class StateStaff(PlayerStateBase):

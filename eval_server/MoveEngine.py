@@ -1,7 +1,7 @@
 import random
 
-import Helper
-from GameState import GameState
+from eval_server import Helper
+from eval_server.GameState import GameState
 
 DEBUG_FLAG = False
 

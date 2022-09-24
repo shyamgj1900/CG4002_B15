@@ -1,9 +1,9 @@
 import json
 import random
 
-from Helper import ice_print_debug
-from StateStaff import StateStaff
-from PlayerState import PlayerStateBase
+from eval_server.Helper import ice_print_debug
+from eval_server.StateStaff import StateStaff
+from eval_server.PlayerState import PlayerStateBase
 
 
 class GameState:

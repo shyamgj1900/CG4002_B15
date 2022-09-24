@@ -17,10 +17,10 @@ from queue import Queue
 from tkinter import ttk
 from tkinter.constants import HORIZONTAL, VERTICAL
 
-from MoveEngine import MoveEngine
-from GameState import GameState
-from Helper import ice_print_debug
-from PlayerState import PlayerStateBase
+from eval_server.MoveEngine import MoveEngine
+from eval_server.GameState import GameState
+from eval_server.Helper import ice_print_debug
+from eval_server.PlayerState import PlayerStateBase
 
 
 # Global flags
@@ -140,13 +140,13 @@ class Server(threading.Thread):
         self.df = pd.DataFrame(columns=self.columns)
         self.df = self.df.set_index('timestamp')
 
-        # used to distinguish 2 different usages of eval_server for the same group
+        # used to distinguish 2 different usages of eval_server_help for the same group
         # not foolproof, needs manual verification
         self.random_id = random.randint(1, 10*1000)
 
         # Setup turns
         self.turn_gen           = TurnGenerator()   # Initialize turn generator
-        self.action_set_time    = 0         # Time turn instructions/actions were set by eval_server
+        self.action_set_time    = 0         # Time turn instructions/actions were set by eval_server_help
         self.turn_wait_timeout  = 60        # Turn response timeout amount
         self.turn_wait_timer    = None      # Timer object to keep track of turn response timeout
 
