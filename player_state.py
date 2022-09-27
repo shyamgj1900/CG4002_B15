@@ -68,7 +68,7 @@ class PlayerStateBase:
         self.num_deaths = player_state.num_deaths
 
     @abstractmethod
-    def update(self, action_self, action_opponent, action_opponent_is_valid):
+    def update(self, action_self, action_opponent, action_self_is_valid, action_opponent_is_valid):
         ...
 
     @abstractmethod
@@ -78,7 +78,7 @@ class PlayerStateBase:
 
 class PlayerState(PlayerStateBase):
     def __init__(self):
-        super(PlayerStateBase, self).__init__()
+        super().__init__()
 
     def action_is_valid(self, player_action):
 
@@ -98,7 +98,7 @@ class PlayerState(PlayerStateBase):
             return False
         return True
 
-    def update(self, action_self, action_opponent, action_opponent_is_valid):
+    def update(self, action_self, action_opponent, action_self_is_valid, action_opponent_is_valid):
 
         self.action = action_self
 
@@ -106,7 +106,7 @@ class PlayerState(PlayerStateBase):
         if self.shield_time == 0:
             self.shield_health = 0
 
-        if self.action_is_valid(action_self):
+        if action_self_is_valid:
             if action_self == 'shoot':
                 self.bullets -= 1
             elif action_self == 'shield':
