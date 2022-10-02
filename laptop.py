@@ -1,20 +1,21 @@
-from multiprocessing import current_process
+from curses import raw
+from dataclasses import dataclass
 from bluepy import btle
-import struct, os, queue, sys 
+import struct, os, queue 
 import concurrent.futures
 from crccheck.crc import Crc8
 from datetime import datetime
 from time import sleep, time
 from bluepy.btle import BTLEDisconnectError, Scanner, DefaultDelegate, Peripheral
-import threading
-import zmq
-import json
+
+import laptop_client_copy
 
 BLE_SERVICE_UUID = "0000dfb0-0000-1000-8000-00805f9b34fb"
 BLE_CHARACTERISTIC_UUID = "0000dfb1-0000-1000-8000-00805f9b34fb"
 WINDOW_SIZE = 10
 TIMEOUT = 0.5 # to be defined
 START = 0
+
 
 packet_queue = queue.Queue()
 packet_type = ''
@@ -45,7 +46,7 @@ BEETLE_3 = 'D0:39:72:BF:C8:9B'
 # 'D0:39:72:BF:C1:C6' - gun
 
 
-ALL_BEETLE = [BEETLE_1,BEETLE_2, BEETLE_3]
+ALL_BEETLE = [BEETLE_1]
 
 #handshake status
 BEETLE_HANDSHAKE_STATUS = {
@@ -54,22 +55,18 @@ BEETLE_HANDSHAKE_STATUS = {
     BEETLE_3 : False
 }
 
-send_NAK_flag = {
+send_IR_NAK_flag = {
     BEETLE_1 : False,
     BEETLE_2 : False,
     BEETLE_3 : False
 }
-send_ACK_flag = {
+
+send_IR_ACK_flag = {
     BEETLE_1 : False,
     BEETLE_2 : False,
     BEETLE_3 : False
 }
-send_specific_ACK_flag = {
-    BEETLE_1 : False,
-    BEETLE_2 : False,
-    BEETLE_3 : False
-}
-send_handshake_ACK_flag = {
+send_HANDSHAKE_ACK_flag = {
     BEETLE_1 : False,
     BEETLE_2 : False,
     BEETLE_3 : False
@@ -95,23 +92,22 @@ sequence_number = {
     BEETLE_3 : 0
 }
 
-num_packet_dropped = {
+NUM_DROP_PACKET = {
     BEETLE_1 : 0,
     BEETLE_2 : 0,
     BEETLE_3 : 0
 }
-num_packet_received = {
+NUM_GOOD_PACKET = {
     BEETLE_1 : 0,
     BEETLE_2 : 0,
     BEETLE_3 : 0
 }
-num_packet_fragmented = {
+NUM_FRAG_PACKET = {
     BEETLE_1 : 0,
     BEETLE_2 : 0,
     BEETLE_3 : 0
 }
 
-first_connection = 1
 
 #Notification Class definition
 class NotificationDelegate(DefaultDelegate):
@@ -119,208 +115,150 @@ class NotificationDelegate(DefaultDelegate):
     def __init__(self,mac_address):
         DefaultDelegate.__init__(self)
         self.mac_address = mac_address
-        self.fragmentation_data = b''
+        self.buffer = b''
+        self.sequence = 0   #for IR
+        send_HANDSHAKE_ACK_flag[self.mac_address] = False
+        send_IR_ACK_flag[self.mac_address] = False
+        send_IR_NAK_flag[self.mac_address] = False
 
     #handleNotification: This function handles notifications
     ##check if handshake is completed
     ##completed_handshake, incoming_data, adding data to fragmented data buffer, check for fragmentation
-    def handleNotification(self, cHandle, data):
+    def handleNotification(self, cHandle, raw_packet_data):
         # print("in handleNotification", self.mac_address)
-            
-        self.fragmentation_data += data
-        if(len(self.fragmentation_data)>=20):
-            raw_packet_data = self.fragmentation_data[0:20]
-            self.handleRawPacket(raw_packet_data)
-
-        
-    #handleFragmentationPacket: This function handles the packet fragmentation
-    def handleRawPacket(self, raw_packet_data):
-        # print("in handleRawPacket_ func")
-        try:  
-            if(len(raw_packet_data)>=20): 
-                #there is  a full packet
-                #send the data packet to unpack data 
-                #shift fragmentation data down by 20 bytes 
-                self.unpack_data_packet(raw_packet_data[0:20])
-                self.fragmentation_data = self.fragmentation_data[20:]
-        except Exception:
-            #In event of any error, return an empty byte array to the buffer
+        #This handles the packet fragmentation
+        self.buffer += raw_packet_data
+        if(len(self.buffer) < 20):
+            NUM_FRAG_PACKET[self.mac_address]+=1
             print("data fragmented")
-            self.fragmentation_data = b''
-
-
-    #unpack_data_packet: This function unpacks data from bluno, to put into queueu to ExtComm  
-    def unpack_data_packet(self, raw_packet_data):
-        # print("in unpack_data_packet_func")
-
-        global packet_type
-        global x_acceleration 
-        global y_acceleration    
-        global z_acceleration 
-        global row   
-        global pitch
-        global yaw
-        global packet_queue 
-        global hit
-        global shoot
-        global send_ACK_flag
-        global send_NAK_flag
-        global seq_num
-        global send_specific_ACK_flag
-        global send_handshake_ACK_flag
-        global sequence_number
-
+            self.buffer = b''
         
-                
-        #handshke completed
-        if(BEETLE_HANDSHAKE_STATUS[self.mac_address]):
-            packet_type = raw_packet_data[0]
-            packetFormat = 'c'+ (19)*'B'
-            print("data: ", struct.unpack(packetFormat, raw_packet_data[0:20]))
-            #Compute the CRC of the packet excluding the start, CRC-8bit and end byte
-            # print("packet_type =", raw_packet_data[0])
-            checksum = Crc8.calc(raw_packet_data[0:19])
-            # print("crc: ", raw_packet_data[19], "checksum: ", checksum)
-            if(checksum == raw_packet_data[19]):
-            
-                
-                #for wrist
-                
-                if(packet_type == 87):
-                    num_packet_received[self.mac_address] = num_packet_received[self.mac_address] + 1
-                    try: 
-                        
-                        #little endiean , short inT
-                        x_acceleration = raw_packet_data[1:3]
-                        y_acceleration = raw_packet_data[3:5]
-                        z_acceleration = raw_packet_data[5:7]
-                        row = raw_packet_data[7:9]
-                        pitch = raw_packet_data[9:11]
-                        yaw = raw_packet_data[11:13]
-                        # send_ACK_flag[self.mac_address] = True
-                        # print ('(Bluno' + str(self.mac_address) + ') packet_type: ' + str(packet_type) )
-                        #To communicate with external Comms to for the arrangement of packet
-                        dataPkt = [packet_type, x_acceleration, y_acceleration, z_acceleration, row, pitch, yaw]
-                        # print("wrist: ", dataPkt)
-                        packet_queue.put(dataPkt)
-                    except Exception:
-                        print("wrist.exception")
-                        
-                # #for gun data
-                if(packet_type == 71):
-                    num_packet_received[self.mac_address] = num_packet_received[self.mac_address] + 1
-                    seq_num[self.mac_address] = raw_packet_data[1]
-                    pad = (0,)
-                    padding = pad *18
-                    packetFormat = 'c'+ (19)*'B'
-                    # print("seq_num: ", seq_num[self.mac_address], "stored_seq:", sequence_number[self.mac_address])
-                    try: 
-                        if(sequence_number[self.mac_address]==seq_num[self.mac_address]):
-                            #send ACK
-                            send_ACK_flag[self.mac_address] = True
-                            gun_buffer[seq_num[self.mac_address]] = None
-                            #send data to ext
-                            ir_emitter = raw_packet_data[2]
+        else:
+            #there is  a full packet
+            #send the data packet to unpack data 
+            #shift buffer data down by 20 bytes 
+            self.handle_packet_data(raw_packet_data[0:20])
+            self.buffer = self.buffer[20:]
 
-                            # print ('(Bluno' + str(self.mac_address) + ') packet_type: ' + str(packet_type) )
-                            sequence_number[self.mac_address] = (sequence_number[self.mac_address] + 1) % 10
-                            #To communicate with external Comms to for the arrangement of packet
-                            dataPkt = [packet_type, ir_emitter]            
-                            packet_queue.put(dataPkt) 
-                            # print( "stored_seq:", sequence_number[self.mac_address])
-                            
+    #handle_packet_data: This function identifies either packet type to handle or drop corrupted data
+    def handle_packet_data(self, raw_packet_data):
+        #check validity by crc
+        # print("in handle_packet_data")
+        if not self.CRCcheck(raw_packet_data):
+            NUM_DROP_PACKET[self.mac_address] +=1
+            return
 
-                            #empty gun_buffer, update seq num
-                            while(gun_buffer[sequence_number[self.mac_address]]!=None):
-                                #send ACK
-                                send_ACK_flag[self.mac_address] = True
-                                #send data to ext
-                                ir_emitter = gun_buffer[sequence_number[self.mac_address]]
-                                gun_buffer[sequence_number[self.mac_address]] = None
-                                # print ('(Bluno' + str(self.mac_address) + ') packet_type: ' + str(packet_type) )
-                                sequence_number[self.mac_address] = (sequence_number[self.mac_address] + 1) % 10
-                                #To communicate with external Comms to for the arrangement of packet
-                                dataPkt = [packet_type, ir_emitter]            
-                                packet_queue.put(dataPkt) 
-                        else:
-                            # print("am here", sequence_number[self.mac_address])
-                            num_packet_fragmented[self.mac_address] = num_packet_fragmented[self.mac_address] + 1
-                            #request for sequence again
-                            send_NAK_flag[self.mac_address] = True;  
-                            #store next seq values, else trash
-                            
-                            if(seq_num[self.mac_address]>sequence_number[self.mac_address]):
-                                vest_buffer[seq_num[self.mac_address]] = raw_packet_data[2]
-                                send_specific_ACK_flag[self.mac_address] = True
-                            #If repeated seq, done nothing n trash
-                            else:
-                                num_packet_dropped[self.mac_address] = num_packet_dropped[self.mac_address] + 1
-                    except Exception as e:
-                        print("gun.exception, error: ", e)
-                #for vest data
-                try:
-                    if(packet_type == 86):
-                        num_packet_received[self.mac_address] = num_packet_received[self.mac_address] + 1
-                        seq_num[self.mac_address] = raw_packet_data[1]
-                        pad = (0,)
-                        padding = pad *18
-                        packetFormat = 'c'+ (19)*'B'
-                        # print("seq_num: ", seq_num[self.mac_address], "stored_seq:", sequence_number[self.mac_address])
-                        if(sequence_number[self.mac_address]==seq_num[self.mac_address]):
-                            #send ACK
-                            vest_buffer[seq_num[self.mac_address]] = None
-                            #send data to ext
-                            ir_receiver = raw_packet_data[2]
+        #unpack for handling 
+        packetFormat = 'c'+ (19)*'B'
+        unpacked_packet = struct.unpack(packetFormat, raw_packet_data[0:20])
+        
+        #convert packet type from byte to char
+        my_list = list(unpacked_packet)
+        my_list[0] = my_list[0].decode("utf-8")
+        unpacked_packet = tuple(my_list)
 
-                            # print ('(Bluno' + str(self.mac_address) + ') packet_type: ' + str(packet_type) )
-                            sequence_number[self.mac_address] = (sequence_number[self.mac_address] + 1) % 10
-                            #To communicate with external Comms to for the arrangement of packet
-                            dataPkt = [packet_type, ir_receiver]            
-                            packet_queue.put(dataPkt) 
-                            # print( "stored_seq:", sequence_number[self.mac_address])
-                            send_ACK_flag[self.mac_address] = True
-
-                            #empty vest_buffer, update seq num
-                            while(vest_buffer[sequence_number[self.mac_address]]!=None):
-                                #send ACK
-                                send_ACK_flag[self.mac_address] = True
-                                #send data to ext
-                                ir_receiver = vest_buffer[sequence_number[self.mac_address]]
-                                vest_buffer[sequence_number[self.mac_address]] = None
-                                # print ('(Bluno' + str(self.mac_address) + ') packet_type: ' + str(packet_type) )
-                                sequence_number[self.mac_address] = (sequence_number[self.mac_address] + 1) % 10
-                                #To communicate with external Comms to for the arrangement of packet
-                                dataPkt = [packet_type, ir_receiver]            
-                                packet_queue.put(dataPkt) 
-                        else:
-                            # print("am here", sequence_number[self.mac_address])
-                            num_packet_fragmented[self.mac_address] = num_packet_fragmented[self.mac_address] + 1
-                            #request for sequence again
-                            send_NAK_flag[self.mac_address] = True;  
-                            #store next seq values, else trash
-                            if(seq_num[self.mac_address]>sequence_number[self.mac_address]):
-                                vest_buffer[seq_num[self.mac_address]] = raw_packet_data[2]
-                                send_specific_ACK_flag[self.mac_address] = True
-                                
-                            #If repeated seq, done nothing n trash
-                            else:
-                                #drop packet for assesement:
-                                num_packet_dropped[self.mac_address] = num_packet_dropped[self.mac_address] + 1
-                except Exception as e:
-                    print("Vest.exception, error: ",e)
-            else:
-                print('(Bluno' + str(self.mac_address) + ') CRC failed')
-                num_packet_dropped[self.mac_address] = num_packet_dropped[self.mac_address] + 1
-        elif(BEETLE_HANDSHAKE_STATUS[self.mac_address]==False and raw_packet_data[0] == 65 ):
-            #ack from handshake
-            # print("changing handshake status")
-            send_handshake_ACK_flag[self.mac_address] = True
+        #bluno handshake ACK
+        if(unpacked_packet[0] == 'A'):
             BEETLE_HANDSHAKE_STATUS[self.mac_address] = True
-            # BEETLE_HANDSHAKE_STATUS[self.mac_address] = True
-        
-        # else:
-        #     print("changing reset status")
-        #     BEETLE_RESET_STATUS[self.mac_address] = True
+            send_HANDSHAKE_ACK_flag[self.mac_address] = True
+            print(BEETLE_HANDSHAKE_STATUS[self.mac_address] )
+                    
+        #handshake completed
+        elif BEETLE_HANDSHAKE_STATUS[self.mac_address]:
+            #identify packet type and handle respectively
+            #handle wrist data, W = 87
+            if(unpacked_packet[0]== 'W'):
+                self.unpack_wrist_data(unpacked_packet)
+            #handle IR_data: gun data, G = 71 || vest data, V = 86
+            elif(unpacked_packet[0]== 'G' or raw_packet_data[0]== 'V'):
+                self.unpack_IR_data(unpacked_packet)
+            #is corrupted and just dropped
+            else: 
+                NUM_DROP_PACKET[self.mac_address] +=1
+
+
+        #reset if the 20bytes is corrutped data and dropped
+        else:
+            BEETLE_RESET_STATUS[self.mac_address] = True
+            NUM_DROP_PACKET[self.mac_address] +=1
+
+
+    #CRCcheck: This function calculates and compare checksum to ensure packet is not corrupted
+    def CRCcheck(self, raw_packet_data):
+        checksum = Crc8.calc(raw_packet_data[0:19])
+        if checksum == raw_packet_data[19]:
+            return True
+        return False
+
+    def unpack_wrist_data(self, unpacked_packet):
+        try: 
+            # lp_client.getData(unpacked_packet)
+            NUM_GOOD_PACKET[self.mac_address] += 1
+        except Exception as e:
+            print("wrist.exception: ", e)
+    
+    def unpack_IR_data(self, unpacked_packet):
+        try: 
+            #drop duplicate packets
+            if(unpacked_packet[1]== self.sequence):
+                NUM_DROP_PACKET[self.mac_address] += 1
+                return
+            
+            self.sequence = unpacked_packet[1]
+            send_IR_ACK_flag[self.mac_address] = True
+            sequence_number[self.mac_address] = self.sequence
+            # lp_client.getData(unpacked_packet)
+            NUM_GOOD_PACKET[self.mac_address] += 1
+
+        except Exception as e:
+            print("IR.exception: ",self.mac_address, " error: ", e)
+            #  if(packet_type == 71):
+            #         num_packet_received[self.mac_address] = num_packet_received[self.mac_address] + 1
+            #         seq_num[self.mac_address] = raw_packet_data[1]
+            #         pad = (0,)
+            #         padding = pad *18
+            #         packetFormat = 'c'+ (19)*'B'
+            #         # print("seq_num: ", seq_num[self.mac_address], "stored_seq:", sequence_number[self.mac_address])
+            #         try: 
+            #             if(sequence_number[self.mac_address]==seq_num[self.mac_address]):
+            #                 #send ACK
+            #                 send_ACK_flag[self.mac_address] = True
+            #                 gun_buffer[seq_num[self.mac_address]] = None
+            #                 #send data to ext
+            #                 ir_emitter = raw_packet_data[2]
+
+            #                 sequence_number[self.mac_address] = (sequence_number[self.mac_address] + 1) % 10
+            #                 #To communicate with external Comms to for the arrangement of packet
+            #                 dataPkt = [packet_type, ir_emitter]            
+            #                 lp_client.getData(unpacked_packet)
+            #                 # print( "stored_seq:", sequence_number[self.mac_address])
+                            
+
+            #                 #empty gun_buffer, update seq num
+            #                 while(gun_buffer[sequence_number[self.mac_address]]!=None):
+            #                     #send ACK
+            #                     send_ACK_flag[self.mac_address] = True
+            #                     #send data to ext
+            #                     ir_emitter = gun_buffer[sequence_number[self.mac_address]]
+            #                     gun_buffer[sequence_number[self.mac_address]] = None
+            #                     # print ('(Bluno' + str(self.mac_address) + ') packet_type: ' + str(packet_type) )
+            #                     sequence_number[self.mac_address] = (sequence_number[self.mac_address] + 1) % 10
+            #                     #To communicate with external Comms to for the arrangement of packet
+            #                     dataPkt = [packet_type, ir_emitter]            
+            #                     packet_queue.put(dataPkt) 
+            #             else:
+            #                 # print("am here", sequence_number[self.mac_address])
+            #                 num_packet_fragmented[self.mac_address] = num_packet_fragmented[self.mac_address] + 1
+            #                 #request for sequence again
+            #                 send_NAK_flag[self.mac_address] = True;  
+            #                 #store next seq values, else trash
+                            
+            #                 if(seq_num[self.mac_address]>sequence_number[self.mac_address]):
+            #                     vest_buffer[seq_num[self.mac_address]] = raw_packet_data[2]
+            #                     send_specific_ACK_flag[self.mac_address] = True
+            #                 #If repeated seq, done nothing n trash
+            #                 else:
+            #                     num_packet_dropped[self.mac_address] = num_packet_dropped[self.mac_address] + 1
 
 
 class beetleThread():
@@ -330,10 +268,9 @@ class beetleThread():
         self.serial_characteristic = self.serial_service.getCharacteristics()[0]
         self.establish_handshake()
 
-
+    #establish_handshake: This function establish handshake w bluno
     def establish_handshake(self):
         timeout_counter = 0
-        global send_handshake_ACK_flag
         try:
             while BEETLE_HANDSHAKE_STATUS[self.beetle_periobj.addr]==False:
                 
@@ -344,34 +281,37 @@ class beetleThread():
                 # print(self)
                 self.serial_characteristic.write(struct.pack(packetFormat, bytes('H', 'utf-8'), *padding),withResponse=False)
                 print("H sent for: " , self.beetle_periobj.addr) 
-                if(timeout_counter%15==0 and not first_connection):
+
+                #no response after 5 H-pkts, reset
+                if(timeout_counter%5==0):
                     print("handshake timeout")
+                    timeout_counter = 0
                     self.reset()
 
                 
-                if self.beetle_periobj.waitForNotifications(5.0):
+                if self.beetle_periobj.waitForNotifications(2.0):
                     #return handshake ack
                     pad = (0,)
                     padding = pad *19
                     packetFormat = 'c'+ (19)*'B'
-                    if(send_handshake_ACK_flag[self.beetle_periobj.addr] == True):
+                    if(send_HANDSHAKE_ACK_flag[self.beetle_periobj.addr] == True):
                         self.serial_characteristic.write(struct.pack(packetFormat, bytes('A', 'utf-8'), *padding),withResponse=False)
                         # print('A for handshake sent : ', self.beetle_periobj.addr)
-                        send_handshake_ACK_flag[self.beetle_periobj.addr] = False
-                        BEETLE_HANDSHAKE_STATUS[self.beetle_periobj.addr] = True
-                first_connection = 0
-                
+                        send_HANDSHAKE_ACK_flag[self.beetle_periobj.addr] = False                
             return True
 
         except BTLEDisconnectError:
             print("in handshake_exception")
             self.reconnect()
+            self.establish_handshake()
            
-
+    #reconnect: This function reconnects the bluno
     def reconnect(self):
+        BEETLE_HANDSHAKE_STATUS[self.beetle_periobj.addr] = False
         try:
+            #drop the beetle
             self.beetle_periobj.disconnect()
-            sleep(1.0)
+            #start new connection with beetle
             self.beetle_periobj.connect(self.beetle_periobj.addr)
             self.beetle_periobj.withDelegate(NotificationDelegate(self.beetle_periobj.addr))
             print("reconnection successful for ", self.beetle_periobj.addr)
@@ -379,50 +319,41 @@ class beetleThread():
             print("in reconnect.exception")
             self.reconnect()
 
+    #reset: This funtion reset the bluno
     def reset(self):
-        global BEETLE_HANDSHAKE_STATUS
-        global BEETLE_RESET_STATUS
-        global send_handshake_ACK_flag
-        # print('in reset')
         pad = (0,)
         padding = pad *19
         packetFormat = 'c'+ (19)*'B'
         self.serial_characteristic.write(struct.pack(packetFormat, bytes('R', 'utf-8'), *padding),withResponse=False)
-        BEETLE_HANDSHAKE_STATUS[self.beetle_periobj.addr] = False
         BEETLE_RESET_STATUS[self.beetle_periobj.addr] = False
-        send_handshake_ACK_flag[self.beetle_periobj.addr] = False
         self.reconnect()
         
 
     
     def run(self):
-        global send_ACK_flag
-        global send_NAK_flag
-        global send_specific_ACK_flag
-        global seq_num
-        global sequence_number
         try:
             while True:
-            #break and reset
+                #break and reset
                 current_time = START
                 if BEETLE_RESET_STATUS[self.beetle_periobj.addr]:
                     break
+
                 #keep waiting for response
                 if self.beetle_periobj.waitForNotifications(2.0):
                     pad = (0,)
                     padding = pad *18
                     packetFormat = 'c'+ (19)*'B'
-                    if(send_ACK_flag[self.beetle_periobj.addr] ==True):
-                        self.serial_characteristic.write(struct.pack(packetFormat, bytes('A', 'utf-8'), sequence_number[self.beetle_periobj.addr], *padding),withResponse=False)
-                        send_ACK_flag[self.beetle_periobj.addr] = False
-                        # print("sent ack")
-                    if(send_NAK_flag[self.beetle_periobj.addr]==True):
+                    # if(send_ACK_flag[self.beetle_periobj.addr] ==True):
+                    #     self.serial_characteristic.write(struct.pack(packetFormat, bytes('A', 'utf-8'), sequence_number[self.beetle_periobj.addr], *padding),withResponse=False)
+                    #     send_ACK_flag[self.beetle_periobj.addr] = False
+                    #     # print("sent ack")
+                    if(send_IR_NAK_flag[self.beetle_periobj.addr]==True):
                         self.serial_characteristic.write(struct.pack(packetFormat, bytes('N', 'utf-8'), sequence_number[self.beetle_periobj.addr], *padding),withResponse=False)
-                        send_NAK_flag[self.beetle_periobj.addr] = False
+                        send_IR_NAK_flag[self.beetle_periobj.addr] = False
                         # print("sent nak")
-                    if(send_specific_ACK_flag[self.beetle_periobj.addr]==True):
-                        self.serial_characteristic.write(struct.pack(packetFormat, bytes('A', 'utf-8'), seq_num[self.beetle_periobj.addr], *padding),withResponse=False)
-                        send_specific_ACK_flag[self.beetle_periobj.addr] = False
+                    if(send_IR_ACK_flag[self.beetle_periobj.addr]==True):
+                        self.serial_characteristic.write(struct.pack(packetFormat, bytes('A', 'utf-8'), sequence_number[self.beetle_periobj.addr], *padding),withResponse=False)
+                        send_IR_ACK_flag[self.beetle_periobj.addr] = False
                         # print("sent specific ack") 
                     
                 
@@ -433,9 +364,8 @@ class beetleThread():
                     # print("packet_recevied: ", num_packet_dropped[self.beetle_periobj.addr])
                     # print("packet_dropped: ", num_packet_dropped[self.beetle_periobj.addr])
                     # print("packet_fragmented: ", num_packet_dropped[self.beetle_periobj.addr])
-                    # print("rate: ", (num_packet_received[self.beetle_periobj.addr]*20)/time_elapsed)
-                
-            self.reset()
+                    # print("rate: ", (num_packet_received[self.beetle_periobj.addr]*20)/time_elapsed)  
+            self.reconnect()
             self.establish_handshake()
             self.run()
         
@@ -443,39 +373,22 @@ class beetleThread():
             print("run.exception")
             print("issue ", e, "for: ", self.beetle_periobj.addr)
             self.reconnect()
-            self.reset()
             self.establish_handshake()
             self.run()
 
-class LaptopClient(threading.Thread):
-    def __init__(self):
-        super(LaptopClient, self).__init__()
-        self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.REQ)
-
-    def init_socket_connection(self):
-        #  Socket to talk to server
-        print("Connecting to Ultra96 server…")
-        self.socket.connect("tcp://localhost:5550")
-
-    def send_message(self):
-        while True:
-            new_action = [123.00,234.0,345.0]#assign the data you get from the bettle
-            new_action_json = json.dumps(new_action)
-            new_action_json = new_action_json.encode("utf8")
-            self.socket.send(new_action_json)
-            message = self.socket.recv()
-            message = message.decode("utf8")
-            print(message)
 
 #main function
 if __name__=='__main__':
-    lp_client = LaptopClient()
-    lp_client.init_socket_connection()
-    lp_client.send_message()
-    
-
+    # new_queue = queue.Queue()
+    lp_client = laptop_client_copy.LaptopClient()
+    lp_client.start()
     beetles = []
+    # laptopClient = laptop_client_copy.LaptopClient
+    #declare relay
+    # # make the send to u96 a new thread with queue
+    # while True:
+    #     while q.notempty():
+    #         daat = q.pop()
     for beetle_mac in ALL_BEETLE:
         beetle_periobj = Peripheral(beetle_mac)
         beetle_periobj.withDelegate(NotificationDelegate(beetle_mac))
