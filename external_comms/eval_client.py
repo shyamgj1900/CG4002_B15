@@ -6,8 +6,7 @@ import time
 from Crypto import Random
 from Crypto.Util.Padding import pad
 from Crypto.Cipher import AES
-from player_state import PlayerStateBase
-from player_state import PlayerState
+from external_comms.player_state import PlayerState
 
 HEADER = 64
 PORT_OUT = 5050

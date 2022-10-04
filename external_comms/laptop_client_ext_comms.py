@@ -7,6 +7,7 @@ from Crypto.Cipher import AES
 import queue
 import json
 
+
 class LaptopClient(threading.Thread):
     def __init__(self):
         super(LaptopClient, self).__init__()
@@ -73,7 +74,6 @@ class LaptopClient(threading.Thread):
              #eg: Received Message: ["W", 59, 89, 9, 4, 30, 76, 66, 140, 181, 119, 48, 49, 0, 0, 0, 0, 0, 0, 35]
         
             while not self.bluno_data.empty():
-
                 new_action = self.bluno_data.get()
                 print("new_action: ", new_action)
                 new_action = json.dumps(new_action)
@@ -85,15 +85,9 @@ class LaptopClient(threading.Thread):
                 message = self.socket.recv()
                 message = message.decode("utf8")
                 print(message)
-                if new_action.lower() == "logout":
-                    break
-        self.socket.close()
-        self.stop_tunnels()
-        print("BYE......")
 
     def getData(self, data):
         self.bluno_data.put(data)
-
 
     def run(self):
         """
