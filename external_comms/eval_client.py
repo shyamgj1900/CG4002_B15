@@ -20,6 +20,7 @@ class EvalClient:
     def __init__(self):
         self.SECRET_KEY = "PLSPLSPLSPLSWORK"
         self.message = {}
+        self.updated_state = {}
         self.client_out = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.init_socket_connection()
         self.connected = True
@@ -60,7 +61,7 @@ class EvalClient:
         except Exception as e:
             print(f"Could not encrypt message due to {e}")
 
-    def update_game_state(self, new_action):
+    def detected_game_state(self, new_action):
         """
         This function updates the players game state based on the action it has received from the client side. (For now
         this function only updates game state based on 1 player mode).
@@ -72,6 +73,12 @@ class EvalClient:
         player1_dict = self.player1.get_dict()
         player2_dict = self.player2.get_dict()
         self.message = {'p1': player1_dict, 'p2': player2_dict}
+
+    def update_game_state(self, updated_state):
+        player1_dict = updated_state['p1']
+        player2_dict = updated_state['p2']
+        self.player1.initialize_from_dict(player1_dict)
+        self.player2.initialize_from_dict(player2_dict)
 
     def send_encrypted_message(self):
         """
@@ -113,5 +120,7 @@ class EvalClient:
         """
         This function updates the game state and sends the encrypted JSON message.
         """
-        self.update_game_state(new_action)
+        self.detected_game_state(new_action)
         self.send_encrypted_message()
+        self.updated_state = self.receive_game_state()
+        self.update_game_state(self.updated_state)
