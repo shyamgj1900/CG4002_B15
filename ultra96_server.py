@@ -7,13 +7,15 @@ from Crypto.Util.Padding import unpad
 from queue import Queue
 
 from pynq_overlay import Process
+from external_comms.game_state import GameState
 from external_comms.eval_client import EvalClient
 from external_comms.visualizer_broadcast import VisualizerBroadcast
 
+game_manager = GameState()
+detected_action = ""
 eval_message_event = threading.Event()
 visualizer_message_event = threading.Event()
 exit_event = threading.Event()
-detected_action = ""
 q = Queue()
 
 
@@ -42,7 +44,12 @@ class Ultra96Server(threading.Thread):
         if self.counter % 600 != 0:
             return False
 
+    @staticmethod
+    def get_detected_action(self):
+        return self.detected_action
+
     def get_action(self):
+        global game_manager
         global detected_action
         if self.raw_data[0] == "G":
             detected_action = "shoot"
@@ -51,6 +58,7 @@ class Ultra96Server(threading.Thread):
             print(detected_action)
             if detected_action != "":
                 print(f"Detected action: {detected_action}")
+                game_manager.detected_game_state(detected_action)
                 eval_message_event.set()
                 visualizer_message_event.set()
             elif detected_action == "":
@@ -65,7 +73,6 @@ class Ultra96Server(threading.Thread):
         This function receives a message from the laptop client through message queues and sends an ACK message back to
         the laptop client.
         """
-        global detected_action
         try:
             padded_raw_data = self.socket.recv()
             self.raw_data = unpad(padded_raw_data, AES.block_size)
@@ -91,13 +98,15 @@ class CommWithEvalServer(threading.Thread):
     def __init__(self):
         super(CommWithEvalServer, self).__init__()
         self.eval_client = EvalClient()
+        self.updated_state = {}
 
     def run(self):
-        global detected_action
+        global game_manager
         while not exit_event.is_set():
             message_received = eval_message_event.wait()
             if message_received:
-                self.eval_client.handle_eval_server(detected_action)
+                self.updated_state = self.eval_client.handle_eval_server(game_manager.get_dict())
+                game_manager.update_game_state(self.updated_state)
                 eval_message_event.clear()
 
 
@@ -107,11 +116,12 @@ class CommWithVisualizer(threading.Thread):
         self.visualizer_publish = VisualizerBroadcast()
 
     def run(self):
+        global game_manager
         global detected_action
         while not exit_event.is_set():
             message_received = visualizer_message_event.wait()
             if message_received:
-                self.visualizer_publish.publish_message(detected_action)
+                self.visualizer_publish.publish_message(game_manager.get_dict())
                 if detected_action == "grenade":
                     time.sleep(1)
                     self.visualizer_publish.receive_message()
