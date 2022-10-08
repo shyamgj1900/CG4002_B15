@@ -39,6 +39,3 @@ client.loop_forever()
 #     client.loop_start()
 #     action = input("type: ")
 #     publish_message(action)
-
-
-
