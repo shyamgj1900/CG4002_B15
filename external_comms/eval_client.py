@@ -19,7 +19,8 @@ ADDR_OUT = (IP_SERVER, PORT_OUT)
 class EvalClient:
     def __init__(self):
         self.SECRET_KEY = "PLSPLSPLSPLSWORK"
-        self.message = {}
+        self.message_dict = {}
+        self.updated_state = {}
         self.client_out = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.init_socket_connection()
         self.connected = True
@@ -60,26 +61,13 @@ class EvalClient:
         except Exception as e:
             print(f"Could not encrypt message due to {e}")
 
-    def update_game_state(self, new_action):
-        """
-        This function updates the players game state based on the action it has received from the client side. (For now
-        this function only updates game state based on 1 player mode).
-        """
-        player1_valid = self.player1.action_is_valid(new_action)
-        # player2_valid = self.player2.action_is_valid(new_action)
-        self.player1.update(new_action, 'none', player1_valid, False)
-        self.player2.update('none', new_action, False, player1_valid)
-        player1_dict = self.player1.get_dict()
-        player2_dict = self.player2.get_dict()
-        self.message = {'p1': player1_dict, 'p2': player2_dict}
-
     def send_encrypted_message(self):
         """
         This function takes the message which is a dictionary and converts it to JSON format which will then by
         encrypted and then sends the message through sockets.
         """
         try:
-            json_message = json.dumps(self.message)
+            json_message = json.dumps(self.message_dict)
             encrypted_message = self.encrypt_message(json_message)
             msg_length = str(len(encrypted_message)) + "_"
             self.client_out.send(msg_length.encode(FORMAT) + encrypted_message)
@@ -113,5 +101,7 @@ class EvalClient:
         """
         This function updates the game state and sends the encrypted JSON message.
         """
-        self.update_game_state(new_action)
+        self.message_dict = new_action
         self.send_encrypted_message()
+        self.updated_state = self.receive_game_state()
+        return self.updated_state
