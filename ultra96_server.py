@@ -121,7 +121,7 @@ class CommWithVisualizer(threading.Thread):
         while not exit_event.is_set():
             message_received = visualizer_message_event.wait()
             if message_received:
-                self.visualizer_publish.publish_message(game_manager.get_dict())
+                self.visualizer_publish.publish_message(json.dumps(game_manager.get_dict()))
                 if detected_action == "grenade":
                     time.sleep(1)
                     self.visualizer_publish.receive_message()
