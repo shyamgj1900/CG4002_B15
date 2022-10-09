@@ -18,7 +18,7 @@ class GameState:
         This function updates the players game state based on the action it has received from the client side. (For now
         this function only updates game state based on 1 player mode).
         """
-        player1_valid = self.player1.action_is_valid(new_action) and player_hit
+        player1_valid = self.player1.action_is_valid(new_action)
         # player2_valid = self.player2.action_is_valid(new_action)
         self.player1.update(new_action, 'none', player1_valid, False)
         self.player2.update('none', new_action, False, player1_valid)
