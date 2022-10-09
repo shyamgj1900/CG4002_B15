@@ -10,6 +10,7 @@ class Process:
         self.q = Queue()
         self.raw_data = ""
         self.counter = 0
+        self.i = 0
 
     def add_raw_data_to_queue(self, raw_data):
         self.q.put(raw_data)
@@ -26,8 +27,9 @@ class Process:
             message = self.q.get()
             print(f"Raw msg: {message}")
         actions = ["shoot", "reload", "grenade", "shield"]
-        i = random.randint(0,3)
-        return actions[i]
+        idx = self.i % 3
+        self.i += 1
+        return actions[idx]
     
     def process(self, raw_data):
         self.raw_data = raw_data

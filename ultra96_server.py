@@ -62,8 +62,8 @@ class Ultra96Server(threading.Thread):
             if detected_action != "":
                 print(f"Detected action: {detected_action}")
                 if detected_action != "grenade":
+                    print("not grenade")
                     game_manager.detected_game_state(detected_action)
-                    eval_message_event.set()
                 visualizer_message_event.set()
             elif detected_action == "":
                 return
@@ -118,6 +118,8 @@ class CommWithVisualizer(threading.Thread):
     def __init__(self):
         super(CommWithVisualizer, self).__init__()
         self.visualizer_publish = VisualizerBroadcast()
+        self.eval_client = EvalClient()
+        self.updated_state = {}
 
     def run(self):
         global game_manager
@@ -126,17 +128,22 @@ class CommWithVisualizer(threading.Thread):
             message_received = visualizer_message_event.wait()
             if message_received:
                 if detected_action != "grenade":
-                    self.visualizer_publish.publish_message(json.dumps(game_manager.get_dict()))
+                    self.visualizer_publish.publish_message(json.dumps(game_manager.get_dict())) 
                 elif detected_action == "grenade":
-                    time.sleep(1)
                     self.visualizer_publish.publish_message(detected_action)
+                    time.sleep(1)
                     player_hit = self.visualizer_publish.receive_message()
                     if player_hit == "yes":
-                        game_manager.detected_game_state(detected_action, True)
+                        detected_action = "grenade"
+                        print(f"In grenade yes {detected_action}")
+                        game_manager.detected_game_state(detected_action)
                     else:
-                        game_manager.detected_game_state(detected_action, False)
-                    eval_message_event.set()
+                        detected_action = "grenade"
+                        print(f"In grenade no {detected_action}")
+                        game_manager.detected_game_state(detected_action)
+                eval_message_event.set()
                 visualizer_message_event.clear()
+                
 
 
 def main():
