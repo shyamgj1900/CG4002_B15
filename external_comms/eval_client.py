@@ -1,18 +1,15 @@
 import base64
 import json
 import socket
-import time
 
 from Crypto import Random
 from Crypto.Util.Padding import pad
 from Crypto.Cipher import AES
-from external_comms.player_state import PlayerState
 
 HEADER = 64
 PORT_OUT = 5050
 IP_SERVER = socket.gethostbyname(socket.gethostname())
 FORMAT = 'utf-8'
-DISCONNECT_MSG = "!DISCONNECT"
 ADDR_OUT = (IP_SERVER, PORT_OUT)
 
 
@@ -23,20 +20,6 @@ class EvalClient:
         self.updated_state = {}
         self.client_out = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.init_socket_connection()
-        self.connected = True
-        self.new_time = 0
-        self.curr_time = 0
-        self.shield_time = 10
-        self.shield_active = False
-        self.player1 = PlayerState()
-        self.player2 = PlayerState()
-
-    def update_shield_time(self):
-        """
-        This function updates the shield time when it is active.
-        """
-        self.curr_time = time.time() - self.new_time
-        self.shield_time -= self.curr_time
 
     def init_socket_connection(self):
         """

@@ -44,10 +44,6 @@ class Ultra96Server(threading.Thread):
         if self.counter % 600 != 0:
             return False
 
-    @staticmethod
-    def get_detected_action(self):
-        return self.detected_action
-
     def get_action(self):
         global game_manager
         global detected_action
@@ -94,8 +90,6 @@ class Ultra96Server(threading.Thread):
         while not exit_event.is_set():
             self.receive_message_from_laptop()
             self.get_action()
-            #eval_message_event.set()
-            #visualizer_message_event.set()
 
 
 class CommWithEvalServer(threading.Thread):
@@ -118,8 +112,6 @@ class CommWithVisualizer(threading.Thread):
     def __init__(self):
         super(CommWithVisualizer, self).__init__()
         self.visualizer_publish = VisualizerBroadcast()
-        self.eval_client = EvalClient()
-        self.updated_state = {}
 
     def run(self):
         global game_manager
@@ -135,15 +127,12 @@ class CommWithVisualizer(threading.Thread):
                     player_hit = self.visualizer_publish.receive_message()
                     if player_hit == "yes":
                         detected_action = "grenade"
-                        print(f"In grenade yes {detected_action}")
                         game_manager.detected_game_state(detected_action)
                     else:
                         detected_action = "grenade"
-                        print(f"In grenade no {detected_action}")
                         game_manager.detected_game_state(detected_action)
                 eval_message_event.set()
                 visualizer_message_event.clear()
-                
 
 
 def main():

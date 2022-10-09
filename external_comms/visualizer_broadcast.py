@@ -21,9 +21,6 @@ class VisualizerBroadcast(threading.Thread):
     def init_message_queue_connection(self):
         self.publisher.on_connect = self.on_connect
         self.publisher.on_message = self.on_message
-
-        # self.publisher.tls_set(tls_version=mqtt.ssl.PROTOCOL_TLS)
-        # self.publisher.username_pw_set(self.username, self.password)
         self.publisher.connect(self.broker_address, 1883)
         self.publisher.subscribe(self.topic_viz_send)
         self.publisher.loop_start()
