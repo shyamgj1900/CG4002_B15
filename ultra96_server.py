@@ -53,13 +53,17 @@ class Ultra96Server(threading.Thread):
         global detected_action
         if self.raw_data[0] == "G":
             detected_action = "shoot"
+            game_manager.detected_game_state(detected_action)
+            eval_message_event.set()
+            visualizer_message_event.set()
         elif self.raw_data[0] == "W":
             detected_action = self.send_to_ai.process(self.raw_data)
             print(detected_action)
             if detected_action != "":
                 print(f"Detected action: {detected_action}")
-                game_manager.detected_game_state(detected_action)
-                eval_message_event.set()
+                if detected_action != "grenade":
+                    game_manager.detected_game_state(detected_action)
+                    eval_message_event.set()
                 visualizer_message_event.set()
             elif detected_action == "":
                 return
@@ -121,10 +125,17 @@ class CommWithVisualizer(threading.Thread):
         while not exit_event.is_set():
             message_received = visualizer_message_event.wait()
             if message_received:
-                self.visualizer_publish.publish_message(json.dumps(game_manager.get_dict()))
-                if detected_action == "grenade":
+                if detected_action != "grenade":
+                    self.visualizer_publish.publish_message(json.dumps(game_manager.get_dict()))
+                elif detected_action == "grenade":
                     time.sleep(1)
-                    self.visualizer_publish.receive_message()
+                    self.visualizer_publish.publish_message(detected_action)
+                    player_hit = self.visualizer_publish.receive_message()
+                    if player_hit == "yes":
+                        game_manager.detected_game_state(detected_action, True)
+                    else:
+                        game_manager.detected_game_state(detected_action, False)
+                    eval_message_event.set()
                 visualizer_message_event.clear()
 
 

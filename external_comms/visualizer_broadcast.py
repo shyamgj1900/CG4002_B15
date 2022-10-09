@@ -46,6 +46,7 @@ class VisualizerBroadcast(threading.Thread):
             if message is None:
                 continue
             print("Received from visualizer", str(message.payload.decode("utf-8")))
+            return str(message.payload.decode("utf-8"))
 
     def publish_message(self, message):
         self.publisher.publish(self.topic_viz_recv, message)
