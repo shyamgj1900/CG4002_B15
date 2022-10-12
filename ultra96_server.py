@@ -1,4 +1,4 @@
-import time
+import sys
 import threading
 import zmq
 import json
@@ -17,6 +17,9 @@ eval_message_event = threading.Event()
 visualizer_message_event = threading.Event()
 exit_event = threading.Event()
 q = Queue()
+
+PORT_OUT = 0
+IP_SERVER = ""
 
 
 class Ultra96Server(threading.Thread):
@@ -95,7 +98,7 @@ class Ultra96Server(threading.Thread):
 class CommWithEvalServer(threading.Thread):
     def __init__(self):
         super(CommWithEvalServer, self).__init__()
-        self.eval_client = EvalClient()
+        self.eval_client = EvalClient(IP_SERVER, PORT_OUT)
         self.updated_state = {}
 
     def run(self):
@@ -124,6 +127,9 @@ class CommWithVisualizer(threading.Thread):
 
 
 def main():
+    global PORT_OUT, IP_SERVER
+    IP_SERVER = sys.argv[0]
+    PORT_OUT = sys.argv[1]
     u96_server = Ultra96Server()
     comm_eval_server = CommWithEvalServer()
     comm_visualizer = CommWithVisualizer()

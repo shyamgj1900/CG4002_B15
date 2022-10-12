@@ -7,14 +7,17 @@ from Crypto.Util.Padding import pad
 from Crypto.Cipher import AES
 
 HEADER = 64
-PORT_OUT = 5050
-IP_SERVER = socket.gethostbyname(socket.gethostname())
+# PORT_OUT = 5050
+# IP_SERVER = socket.gethostbyname(socket.gethostname())
 FORMAT = 'utf-8'
-ADDR_OUT = (IP_SERVER, PORT_OUT)
+# ADDR_OUT = (IP_SERVER, PORT_OUT)
 
 
 class EvalClient:
-    def __init__(self):
+    def __init__(self, eval_server_ip, eval_server_port):
+        self.server_ip = eval_server_ip
+        self.port_num = eval_server_port
+        self.addr_out = (self.server_ip, self.port_num)
         self.SECRET_KEY = "PLSPLSPLSPLSWORK"
         self.message_dict = {}
         self.updated_state = {}
@@ -26,7 +29,7 @@ class EvalClient:
         This function connects the client to the eval server.
         """
         try:
-            self.client_out.connect(ADDR_OUT)
+            self.client_out.connect(self.addr_out)
         except socket.error as err:
             print("Socket error: " + str(err))
 
