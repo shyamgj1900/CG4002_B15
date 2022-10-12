@@ -6,7 +6,7 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 from queue import Queue
 
-from pynq_overlay import Process
+from hardware_ai.pynq_overlay import Process
 from external_comms.game_state import GameState
 from external_comms.eval_client import EvalClient
 from external_comms.visualizer_broadcast import VisualizerBroadcast
@@ -48,18 +48,18 @@ class Ultra96Server(threading.Thread):
         global game_manager
         global detected_action
         if self.raw_data[0] == "G":
+            print(f"in u96 g: {self.raw_data}")
             detected_action = "shoot"
             game_manager.detected_game_state(detected_action)
             eval_message_event.set()
             visualizer_message_event.set()
         elif self.raw_data[0] == "W":
-            detected_action = self.send_to_ai.process(self.raw_data)
-            print(detected_action)
+            detected_action = self.send_to_ai.data_collection(self.raw_data)
+            print(f"In u96: {self.raw_data}")
             if detected_action != "":
                 print(f"Detected action: {detected_action}")
-                if detected_action != "grenade":
-                    print("not grenade")
-                    game_manager.detected_game_state(detected_action)
+                game_manager.detected_game_state(detected_action)
+                eval_message_event.set()
                 visualizer_message_event.set()
             elif detected_action == "":
                 return
@@ -119,19 +119,7 @@ class CommWithVisualizer(threading.Thread):
         while not exit_event.is_set():
             message_received = visualizer_message_event.wait()
             if message_received:
-                if detected_action != "grenade":
-                    self.visualizer_publish.publish_message(json.dumps(game_manager.get_dict())) 
-                elif detected_action == "grenade":
-                    self.visualizer_publish.publish_message(detected_action)
-                    time.sleep(1)
-                    player_hit = self.visualizer_publish.receive_message()
-                    if player_hit == "yes":
-                        detected_action = "grenade"
-                        game_manager.detected_game_state(detected_action)
-                    else:
-                        detected_action = "grenade"
-                        game_manager.detected_game_state(detected_action)
-                eval_message_event.set()
+                self.visualizer_publish.publish_message(json.dumps(game_manager.get_dict())) 
                 visualizer_message_event.clear()
 
 
