@@ -57,7 +57,7 @@ class Ultra96Server(threading.Thread):
             eval_message_event.set()
             visualizer_message_event.set()
         elif self.raw_data[0] == "W":
-            detected_action = self.send_to_ai.data_collection(self.raw_data)
+            detected_action = self.send_to_ai.process(self.raw_data)
             print(f"In u96: {self.raw_data}")
             if detected_action != "":
                 print(f"Detected action: {detected_action}")
@@ -128,8 +128,9 @@ class CommWithVisualizer(threading.Thread):
 
 def main():
     global PORT_OUT, IP_SERVER
-    IP_SERVER = sys.argv[0]
-    PORT_OUT = sys.argv[1]
+    IP_SERVER = sys.argv[1]
+    PORT_OUT = sys.argv[2]
+    PORT_OUT = int(PORT_OUT)
     u96_server = Ultra96Server()
     comm_eval_server = CommWithEvalServer()
     comm_visualizer = CommWithVisualizer()
