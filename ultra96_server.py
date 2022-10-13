@@ -12,9 +12,12 @@ from external_comms.eval_client import EvalClient
 from external_comms.visualizer_broadcast import VisualizerBroadcast
 
 game_manager = GameState()
+detected_action_q = Queue()
+received_raw_data = ""
 detected_action = ""
 eval_message_event = threading.Event()
 visualizer_message_event = threading.Event()
+detect_action_event = threading.Event()
 exit_event = threading.Event()
 q = Queue()
 
@@ -22,36 +25,16 @@ PORT_OUT = 0
 IP_SERVER = ""
 
 
-class Ultra96Server(threading.Thread):
+class DetectActionFromAI(threading.Thread):
     def __init__(self):
-        super(Ultra96Server, self).__init__()
-        self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.REP)
+        super(DetectActionFromAI, self).__init__()
         self.send_to_ai = Process()
-        self.raw_data = ""
         self.counter = 0
         self.turn_counter = 0
 
-    def init_socket_connection(self):
-        """
-        This function initialises the socket connection.
-        """
-        try:
-            print("Establishing connection through port 5550")
-            self.socket.bind("tcp://*:5550")
-        except Exception as e:
-            print(f"Socket err: {e}")
-
-    def add_raw_data_to_queue(self):
-        q.put(self.raw_data)
-        self.counter += 1
-        if self.counter % 600 != 0:
-            return False
-
-    def get_action(self):
-        global game_manager
-        global detected_action
-        if self.raw_data[0] == "G":
+    def get_action(self, action):
+        global game_manager, detected_action
+        if action[0] == "G":
             # print(f"in u96 g: {self.raw_data}")
             detected_action = "shoot"
             self.turn_counter += 1
@@ -61,9 +44,9 @@ class Ultra96Server(threading.Thread):
             self.send_to_ai.process("")
             eval_message_event.set()
             visualizer_message_event.set()
-        elif self.raw_data[0] == "W":
-            detected_action = self.send_to_ai.process(self.raw_data)
-            print(f"In u96: {self.raw_data}")
+        elif action[0] == "W":
+            detected_action = self.send_to_ai.process(action)
+            # print(f"In u96: {action}")
             if detected_action != "":
                 print(f"Detected action: {detected_action}")
                 self.turn_counter += 1
@@ -78,6 +61,31 @@ class Ultra96Server(threading.Thread):
             exit_event.set()
         return
 
+    def run(self):
+        global detected_action_q
+        while True:
+            while not detected_action_q.empty():
+                action = detected_action_q.get()
+                self.get_action(action)
+
+
+class Ultra96Server(threading.Thread):
+    def __init__(self):
+        super(Ultra96Server, self).__init__()
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.REP)
+        self.raw_data = ""
+
+    def init_socket_connection(self):
+        """
+        This function initialises the socket connection.
+        """
+        try:
+            print("Establishing connection through port 5550")
+            self.socket.bind("tcp://*:5550")
+        except Exception as e:
+            print(f"Socket err: {e}")
+
     def receive_message_from_laptop(self):
         """
         This function receives a message from the laptop client through message queues and sends an ACK message back to
@@ -88,6 +96,7 @@ class Ultra96Server(threading.Thread):
             self.raw_data = unpad(padded_raw_data, AES.block_size)
             self.raw_data = self.raw_data.decode("utf8")
             self.raw_data = json.loads(self.raw_data)
+            detected_action_q.put(self.raw_data)
             self.socket.send(b"ACK")
         except Exception as e:
             print(f"Error receiving message: {e}")
@@ -99,7 +108,6 @@ class Ultra96Server(threading.Thread):
         self.init_socket_connection()
         while not exit_event.is_set():
             self.receive_message_from_laptop()
-            self.get_action()
 
 
 class CommWithEvalServer(threading.Thread):
