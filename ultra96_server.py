@@ -52,9 +52,11 @@ class Ultra96Server(threading.Thread):
         global game_manager
         global detected_action
         if self.raw_data[0] == "G":
-            print(f"in u96 g: {self.raw_data}")
+            # print(f"in u96 g: {self.raw_data}")
             detected_action = "shoot"
             self.turn_counter += 1
+            print(f"Detected action: {detected_action}")
+            print(f"Turn count: {self.turn_counter}")
             game_manager.detected_game_state(detected_action)
             self.send_to_ai.process("")
             eval_message_event.set()
@@ -65,6 +67,7 @@ class Ultra96Server(threading.Thread):
             if detected_action != "":
                 print(f"Detected action: {detected_action}")
                 self.turn_counter += 1
+                print(f"Detected action: {self.turn_counter}")
                 game_manager.detected_game_state(detected_action)
                 eval_message_event.set()
                 visualizer_message_event.set()
