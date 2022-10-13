@@ -30,6 +30,7 @@ class Ultra96Server(threading.Thread):
         self.send_to_ai = Process()
         self.raw_data = ""
         self.counter = 0
+        self.turn_counter = 0
 
     def init_socket_connection(self):
         """
@@ -53,7 +54,9 @@ class Ultra96Server(threading.Thread):
         if self.raw_data[0] == "G":
             print(f"in u96 g: {self.raw_data}")
             detected_action = "shoot"
+            self.turn_counter += 1
             game_manager.detected_game_state(detected_action)
+            self.send_to_ai.process("")
             eval_message_event.set()
             visualizer_message_event.set()
         elif self.raw_data[0] == "W":
@@ -61,12 +64,13 @@ class Ultra96Server(threading.Thread):
             print(f"In u96: {self.raw_data}")
             if detected_action != "":
                 print(f"Detected action: {detected_action}")
+                self.turn_counter += 1
                 game_manager.detected_game_state(detected_action)
                 eval_message_event.set()
                 visualizer_message_event.set()
             elif detected_action == "":
                 return
-        if detected_action == "logout":
+        if detected_action == "logout" and self.turn_counter >= 19:
             print("Disconnecting BYE.....")
             exit_event.set()
         return
