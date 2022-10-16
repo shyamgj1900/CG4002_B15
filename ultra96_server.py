@@ -5,6 +5,7 @@ import json
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 from queue import Queue
+import time
 
 # from hardware_ai.pynq_overlay import Process
 from external_comms.test_ai import TestAI
@@ -46,6 +47,7 @@ class DetectActionFromAI(threading.Thread):
             print(f"Turn count for player 1: {self.turn_counter_p1}")
         elif action[0] == "W1":
             player1_detected_action = self.send_to_ai.process(action)
+            print(f"Player 1 detected action: {player1_detected_action}")
             if player1_detected_action != "":
                 self.turn_counter_p1 += 1
                 print(f"Detected action for player 1: {player1_detected_action}")
@@ -66,6 +68,7 @@ class DetectActionFromAI(threading.Thread):
             print(f"Turn count for player 2: {self.turn_counter_p2}")
         elif action[0] == "W2":
             player2_detected_action = self.send_to_ai.process(action)
+            print(f"Player 2 detected action: {player2_detected_action}")
             if player1_detected_action != "":
                 self.turn_counter_p2 += 1
                 print(f"Detected action for Player 2: {player2_detected_action}")
@@ -84,12 +87,14 @@ class DetectActionFromAI(threading.Thread):
         while not exit_event.is_set():
             while not player1_action_q.empty():
                 action = player1_action_q.get()
+                # print(f"In run player 1: {action}")
                 self.get_action_player1(action)
                 if action != "":
                     action1_flag = True
 
             while not player2_action_q.empty():
                 action = player2_action_q.get()
+                # print(f"In run player 2: {action}")
                 self.get_action_player2(action)
                 if action != "":
                     action2_flag = True
@@ -124,14 +129,15 @@ class Ultra96Server(threading.Thread):
         This function receives a message from the laptop client through message queues and sends an ACK message back to
         the laptop client.
         """
+        global player1_action_q, player2_action_q
         try:
             padded_raw_data = self.socket.recv()
             self.raw_data = unpad(padded_raw_data, AES.block_size)
             self.raw_data = self.raw_data.decode("utf8")
             self.raw_data = json.loads(self.raw_data)
-            if self.raw_data[0] == 'G1' or self.raw_data == 'W1' or self.raw_data == 'V1':
+            if self.raw_data[0] == 'G1' or self.raw_data[0] == 'W1' or self.raw_data[0] == 'V1':
                 player1_action_q.put(self.raw_data)
-            elif self.raw_data[0] == 'G2' or self.raw_data == 'W2' or self.raw_data == 'V2':
+            elif self.raw_data[0] == 'G2' or self.raw_data[0] == 'W2' or self.raw_data[0] == 'V2':
                 player2_action_q.put(self.raw_data)
             self.socket.send(b"ACK")
         except Exception as e:
@@ -183,9 +189,11 @@ def main():
     PORT_OUT = sys.argv[2]
     PORT_OUT = int(PORT_OUT)
     u96_server = Ultra96Server()
+    detect_action_from_ai = DetectActionFromAI()
     comm_eval_server = CommWithEvalServer()
     comm_visualizer = CommWithVisualizer()
     u96_server.start()
+    detect_action_from_ai.start()
     comm_eval_server.start()
     comm_visualizer.start()
 

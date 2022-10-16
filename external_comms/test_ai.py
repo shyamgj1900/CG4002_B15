@@ -11,9 +11,11 @@ class TestAI:
     def process(self, raw_data):
         if len(self.raw_buffer) < 20:
             self.raw_buffer.append(raw_data)
+            return ""
         elif len(self.raw_buffer) >= 20:
             actions = ['shield', 'shoot', 'grenade', 'reload']
             idx = self.counter % 4
             self.counter += 1
+            self.raw_buffer.clear()
             time.sleep(1)
             return actions[idx]
