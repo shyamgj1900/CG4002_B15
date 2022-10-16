@@ -71,16 +71,18 @@ class LaptopClient(threading.Thread):
         while True:
             # Get new action input from user
             # new_action = input("[Type] New Action: ")
-            new_action = ['W', 1, 0]
-            new_action = json.dumps(new_action)
-            new_action_encode = new_action.encode("utf8")
-            new_action_padded_message = pad(new_action_encode, AES.block_size)
-            self.socket.send(new_action_padded_message)
-            # Receive acknowledge message
-            message = self.socket.recv()
-            message = message.decode("utf8")
-            print(message)
-            time.sleep(0.3)
+            packet_types = ['W1', 'W2']
+            for packet_type in packet_types:
+                new_action = [packet_type, 1.132, -2.221, 1.112, 1.442, 3.112, 0.22]
+                new_action = json.dumps(new_action)
+                new_action_encode = new_action.encode("utf8")
+                new_action_padded_message = pad(new_action_encode, AES.block_size)
+                self.socket.send(new_action_padded_message)
+                # Receive acknowledge message
+                message = self.socket.recv()
+                message = message.decode("utf8")
+                print(message)
+                time.sleep(0.1)
             # if new_action.lower() == "logout":
             #     break
         # self.socket.close()

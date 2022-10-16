@@ -1,14 +1,9 @@
-from curses import raw
-from dataclasses import dataclass
-from bluepy import btle
-import struct, os, queue 
+import struct, queue
 import concurrent.futures
 from crccheck.crc import Crc8
-from datetime import datetime
-from time import sleep, time
-from bluepy.btle import BTLEDisconnectError, Scanner, DefaultDelegate, Peripheral
+from bluepy.btle import BTLEDisconnectError, DefaultDelegate, Peripheral
 
-import laptop_client_copy
+from external_comms import laptop_client_ext_comms
 
 BLE_SERVICE_UUID = "0000dfb0-0000-1000-8000-00805f9b34fb"
 BLE_CHARACTERISTIC_UUID = "0000dfb1-0000-1000-8000-00805f9b34fb"
@@ -192,7 +187,7 @@ class NotificationDelegate(DefaultDelegate):
 
     def unpack_wrist_data(self, unpacked_packet):
         try: 
-            # lp_client.getData(unpacked_packet)
+            lp_client.getData(unpacked_packet)
             NUM_GOOD_PACKET[self.mac_address] += 1
         except Exception as e:
             print("wrist.exception: ", e)
@@ -207,7 +202,7 @@ class NotificationDelegate(DefaultDelegate):
             self.sequence = unpacked_packet[1]
             send_IR_ACK_flag[self.mac_address] = True
             sequence_number[self.mac_address] = self.sequence
-            # lp_client.getData(unpacked_packet)
+            lp_client.getData(unpacked_packet)
             NUM_GOOD_PACKET[self.mac_address] += 1
 
         except Exception as e:
@@ -380,7 +375,7 @@ class beetleThread():
 #main function
 if __name__=='__main__':
     # new_queue = queue.Queue()
-    lp_client = laptop_client_copy.LaptopClient()
+    lp_client = laptop_client_ext_comms.LaptopClient()
     lp_client.start()
     beetles = []
     # laptopClient = laptop_client_copy.LaptopClient
