@@ -37,6 +37,8 @@ class DetectActionFromAI(threading.Thread):
         self.counter = 0
         self.turn_counter_p1 = 0
         self.turn_counter_p2 = 0
+        self.action1_flag = False
+        self.action2_flag = False
 
     def get_action_player1(self, action):
         global game_manager, player1_detected_action
@@ -52,6 +54,7 @@ class DetectActionFromAI(threading.Thread):
                 self.turn_counter_p1 += 1
                 print(f"Detected action for player 1: {player1_detected_action}")
                 print(f"Turn count for player 1: {self.turn_counter_p1}")
+                self.action1_flag = True
             elif player1_detected_action == "":
                 return ""
         if player1_detected_action == "logout" and self.turn_counter_p1 >= 19:
@@ -69,10 +72,11 @@ class DetectActionFromAI(threading.Thread):
         elif action[0] == "W2":
             player2_detected_action = self.send_to_ai.process(action)
             print(f"Player 2 detected action: {player2_detected_action}")
-            if player1_detected_action != "":
+            if player2_detected_action != "":
                 self.turn_counter_p2 += 1
                 print(f"Detected action for Player 2: {player2_detected_action}")
                 print(f"Turn count for player 2: {self.turn_counter_p2}")
+                self.action2_flag = True
             elif player2_detected_action == "":
                 return ""
         if player2_detected_action == "logout" and self.turn_counter_p2 >= 19:
@@ -81,28 +85,24 @@ class DetectActionFromAI(threading.Thread):
         return
 
     def run(self):
-        global player1_action_q, player2_action_q
-        action1_flag = False
-        action2_flag = False
+        global player1_action_q, player2_action_q, game_manager
         while not exit_event.is_set():
             while not player1_action_q.empty():
                 action = player1_action_q.get()
                 # print(f"In run player 1: {action}")
                 self.get_action_player1(action)
-                if action != "":
-                    action1_flag = True
 
             while not player2_action_q.empty():
                 action = player2_action_q.get()
                 # print(f"In run player 2: {action}")
                 self.get_action_player2(action)
-                if action != "":
-                    action2_flag = True
 
-            if action1_flag is True and action2_flag is True:
-                game_manager.detected_game_state(player1_detected_action, player2_detected_action)
-                action1_flag = False
-                action2_flag = False
+            if self.action1_flag is True and self.action2_flag is True:
+                print("Action 1 and 2 True")
+                game_manager.detected_game_state("shoot", "grenade")
+                print(game_manager.get_dict())
+                self.action1_flag = False
+                self.action2_flag = False
                 eval_message_event.set()
                 visualizer_message_event.set()
 
