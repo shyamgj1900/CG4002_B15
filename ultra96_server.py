@@ -151,6 +151,8 @@ class Ultra96Server(threading.Thread):
             game_manager.detected_game_state(player1_detected_action, player2_detected_action)
             self.comm_eval_server.send_message_to_eval_server()
             self.comm_visualizer.send_message_to_visualizer()
+            player1_detected_action = ""
+            player2_detected_action = ""
 
     def run(self):
         """
