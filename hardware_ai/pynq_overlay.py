@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 from scipy import stats, signal 
 from tensorflow.keras.models import load_model
+from sklearn.preprocessing import StandardScaler #new
 
 class Process:
     def __init__(self):
@@ -15,6 +16,7 @@ class Process:
         self.raw_buffer = []
         self.counter = 0
         self.i = 0
+        self.scaler = StandardScaler() #new
 
     def add_raw_data_to_queue(self, raw_data):
         self.q.put(raw_data)
@@ -36,6 +38,9 @@ class Process:
         return actions[idx]
 
     def process(self, raw):
+        if raw == "":
+            self.raw_buffer = []
+            return
         raw_data = self.raw_queue(raw)
         if raw_data == "": return ""
         
@@ -48,28 +53,31 @@ class Process:
         final_data = pd.DataFrame(data=np.array(final_data).T, columns = ["acc_x", "acc_y", "acc_z", "gyr_x", "gyr_y", "gyr_z"])
         final_data = self.extract_raw_data_features(final_data)
         final_data = self.create_featureslist(final_data)
-
-        model = load_model('./hardware_ai/cg4002/action_detection.h5')
+        
+        scaler.fit(final_data)
+        final_data = scaler.transform(final_data)
+        
+        model = load_model('./hardware_ai/cg4002/detection.h5')
         final_data = np.array([final_data])
         output = model.predict(final_data).tolist()[0]
         prediction = output.index(max(output))
+        
         if prediction == 0:
             return "reload"
         if prediction == 1:
             return "shield"
         if prediction == 2:
             return "grenade"
-#         if prediction == 3:
-#             return "logout"
-        if prediction == 4 or prediction == 3:
+        if prediction == 3:
+            return "logout"
+        if prediction == 4:
             return ""
-#         return final_data
     
     def raw_queue(self, raw_data):
-        if len(self.raw_buffer) < 100:
+        if len(self.raw_buffer) < 10:
             self.raw_buffer.append(raw_data)
             return ""
-        if len(self.raw_buffer) >= 100:
+        if len(self.raw_buffer) >= 10:
             pkt = self.raw_buffer
             self.raw_buffer = []
             return pkt  
@@ -176,10 +184,10 @@ class Process:
     
     
     def data_collection(self, raw_data):
-#         self.raw_data.append(raw_data)
+        # self.raw_data.append(raw_data)
         
-        with open('rawdata.csv', 'a+') as f:
-            f.write(','.join(map(str, raw_data)) + '\n')
+        # with open('rawdata.csv', 'a+') as f:
+        #    f.write(','.join(map(str, raw_data)) + '\n')
             
-        detected_action = self.detect_action()
-        return detected_action
+        # detected_action = self.detect_action()
+        return "shoot"
