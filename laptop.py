@@ -8,7 +8,7 @@ from datetime import datetime
 from time import sleep, time
 from bluepy.btle import BTLEDisconnectError, Scanner, DefaultDelegate, Peripheral
 
-import laptop_client
+import laptop_client_copy
 
 BLE_SERVICE_UUID = "0000dfb0-0000-1000-8000-00805f9b34fb"
 BLE_CHARACTERISTIC_UUID = "0000dfb1-0000-1000-8000-00805f9b34fb"
@@ -52,7 +52,7 @@ BEETLE_3 = 'D0:39:72:BF:C8:9B'
 # BEETLE_2 = 'D0:39:72:BF:C8:9B' # p1 vest
 # BEETLE_3 = 'D0:39:72:BF:C1:C6' # p1 gun
 
-ALL_BEETLE = [BEETLE_2,BEETLE_3]
+ALL_BEETLE = [BEETLE_2]
 # ALL_BEETLE = [BEETLE_1, BEETLE_2, BEETLE_3]
 
 #handshake status
@@ -420,7 +420,7 @@ class beetleThread():
 #main function
 if __name__=='__main__':
     # new_queue = queue.Queue()
-    lp_client = laptop_client.LaptopClient()
+    lp_client = laptop_client_copy.LaptopClient()
     lp_client.start()
     beetles = []
     # laptopClient = laptop_client.LaptopClient
