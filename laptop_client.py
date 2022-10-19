@@ -7,6 +7,8 @@ from sshtunnel import SSHTunnelForwarder
 from getpass import getpass
 from Crypto.Util.Padding import pad
 from Crypto.Cipher import AES
+import queue
+import json
 
 
 class LaptopClient(threading.Thread):
@@ -21,6 +23,7 @@ class LaptopClient(threading.Thread):
         self.ultra96_ssh_username = "xilinx"
         self.ultra96_ssh_password = "xilinx"
         self.tunnels = []
+        self.bluno_data = queue.Queue()
 
     def start_tunnels(self):
         """
@@ -71,21 +74,25 @@ class LaptopClient(threading.Thread):
         while True:
             # Get new action input from user
             # new_action = input("[Type] New Action: ")
-            new_action = ['W', 1, 0]
-            new_action = json.dumps(new_action)
-            new_action_encode = new_action.encode("utf8")
-            new_action_padded_message = pad(new_action_encode, AES.block_size)
-            self.socket.send(new_action_padded_message)
-            # Receive acknowledge message
-            message = self.socket.recv()
-            message = message.decode("utf8")
-            print(message)
-            time.sleep(0.3)
-            # if new_action.lower() == "logout":
-            #     break
-        # self.socket.close()
-        # self.stop_tunnels()
-        # print("BYE......")
+            while not self.bluno_data.empty():
+                new_action = self.bluno_data.get()
+                print("new_action: ", new_action)
+                new_action = json.dumps(new_action)
+                new_action_encode = new_action.encode("utf8")
+                new_action_padded_message = pad(new_action_encode, AES.block_size)
+                self.socket.send(new_action_padded_message)
+                # Receive acknowledge message
+                message = self.socket.recv()
+                message = message.decode("utf8")
+                print(message)
+                time.sleep(0.3)
+                if new_action.lower() == "logout":
+                    break
+        self.socket.close()
+        self.stop_tunnels()
+        print("BYE......")
+    def getData(self, data):
+        self.bluno_data.put(data)
 
     def run(self):
         """
