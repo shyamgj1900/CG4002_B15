@@ -8,7 +8,8 @@ import pandas as pd
 import numpy as np
 from scipy import stats, signal 
 from tensorflow.keras.models import load_model
-from sklearn.preprocessing import StandardScaler #new
+# from sklearn.preprocessing import StandardScaler #new
+from joblib import load
 
 class Process:
     def __init__(self):
@@ -16,7 +17,7 @@ class Process:
         self.raw_buffer = []
         self.counter = 0
         self.i = 0
-        self.scaler = StandardScaler() #new
+#         self.scaler = StandardScaler() #new
 
     def add_raw_data_to_queue(self, raw_data):
         self.q.put(raw_data)
@@ -38,28 +39,39 @@ class Process:
         return actions[idx]
 
     def process(self, raw):
-        if raw == "":
-            self.raw_buffer = []
-            return
-        raw_data = self.raw_queue(raw)
-        if raw_data == "": return ""
+#         if raw == "":
+#             self.raw_buffer = []
+#             return
+#         raw_data = self.raw_queue(raw)
+#             self.raw_buffer.append(raw)
+#             return ""
+#         if raw_data == "": return ""
+#         print()
+        self.raw_buffer.append(raw)
+        if len(self.raw_buffer) < 10:
+            return ""
         
+#         data = [[self.raw_buffer[0][1], self.raw_buffer[0][2], self.raw_buffer[0][3], self.raw_buffer[0][4], self.raw_buffer[0][5], self.raw_buffer[0][6]]]
+#         for i in range(1, len(self.raw_buffer)):
+#             data.append([self.raw_buffer[i][1], self.raw_buffer[i][2], self.raw_buffer[i][3], self.raw_buffer[i][4], self.raw_buffer[i][5], self.raw_buffer[i][6]])
         data = pd.DataFrame(columns=['acceleration_x', 'acceleration_y', 'acceleration_z', 'gyro_x', 'gyro_y', 'gyro_z'])
-        for i in range(len(raw_data)):
-            list_row = [raw_data[i][1],raw_data[i][2],raw_data[i][3],raw_data[i][4],raw_data[i][5],raw_data[i][6]]
-            data.loc[len(data)] = list_row
-            
+        for i in range(len(self.raw_buffer)):
+            list_row = [self.raw_buffer[i][1]/100, self.raw_buffer[i][2]/100, self.raw_buffer[i][3]/100, self.raw_buffer[i][4], self.raw_buffer[i][5], self.raw_buffer[i][6]]
+            data.loc[len(data)] = list_row    
+
+        self.raw_buffer.clear()
+        
+               
         final_data = self.combine_rows(data.values.tolist())        
         final_data = pd.DataFrame(data=np.array(final_data).T, columns = ["acc_x", "acc_y", "acc_z", "gyr_x", "gyr_y", "gyr_z"])
         final_data = self.extract_raw_data_features(final_data)
-        final_data = self.create_featureslist(final_data)
-        
-        scaler.fit(final_data)
-        final_data = scaler.transform(final_data)
-        
-        model = load_model('./hardware_ai/cg4002/detection.h5')
-        final_data = np.array([final_data])
-        output = model.predict(final_data).tolist()[0]
+        final_data = np.array([self.create_featureslist(final_data)])
+        scaler=load('./hardware_ai/cg4002/scaler.joblib')
+        final_data = scaler.transform(final_data.tolist())
+
+        model = load_model('./hardware_ai/cg4002/detection1.h5')
+#         final_data = np.array([final_data])
+        output = model.predict([final_data]).tolist()[0]
         prediction = output.index(max(output))
         
         if prediction == 0:
@@ -79,13 +91,12 @@ class Process:
             return ""
         if len(self.raw_buffer) >= 10:
             pkt = self.raw_buffer
-            self.raw_buffer = []
+            self.raw_buffer.clear()
             return pkt  
 
     def combine_rows(self, data):
         combined_raw = []
         new_data = []
-    #     new_data = pd.DataFrame(columns=['acceleration_x', 'acceleration_y', 'acceleration_z', 'gyro_x', 'gyro_y', 'gyro_z'])
         for col in range(6):
             for row in range(len(data)):
                 combined_raw.append(data[row][col])
