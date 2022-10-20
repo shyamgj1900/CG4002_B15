@@ -46,7 +46,7 @@ class DetectActionFromAI(threading.Thread):
             visualizer_message_event.set()
         elif action[0] == "W":
             detected_action = self.send_to_ai.process(action)
-            # print(f"In u96: {action}")
+            print(f"Received raw data: {action}")
             if detected_action != "":
                 print(f"Detected action: {detected_action}")
                 self.turn_counter += 1
@@ -62,8 +62,8 @@ class DetectActionFromAI(threading.Thread):
         return
 
     def run(self):
-        global detected_action_q
-        while True:
+        global detected_action_q        
+        while not exit_event.is_set():
             while not detected_action_q.empty():
                 action = detected_action_q.get()
                 self.get_action(action)
@@ -147,9 +147,11 @@ def main():
     PORT_OUT = sys.argv[2]
     PORT_OUT = int(PORT_OUT)
     u96_server = Ultra96Server()
+    detect_action_from_ai = DetectActionFromAI()
     comm_eval_server = CommWithEvalServer()
     comm_visualizer = CommWithVisualizer()
     u96_server.start()
+    detect_action_from_ai.start()
     comm_eval_server.start()
     comm_visualizer.start()
 
