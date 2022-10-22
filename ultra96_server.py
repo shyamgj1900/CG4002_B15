@@ -7,8 +7,8 @@ from Crypto.Util.Padding import unpad
 from queue import Queue
 import time
 
-# from hardware_ai.pynq_overlay import Process
-from external_comms.test_ai import TestAI
+from hardware_ai.pynq_overlay import Process
+# from external_comms.test_ai import TestAI
 from external_comms.game_state import GameState
 from external_comms.eval_client import EvalClient
 from external_comms.visualizer_broadcast import VisualizerBroadcast
@@ -30,8 +30,8 @@ IP_SERVER = ""
 class DetectActionForP1(threading.Thread):
     def __init__(self):
         super(DetectActionForP1, self).__init__()
-        # self.send_to_ai = Process()
-        self.send_to_ai = TestAI()
+        self.send_to_ai = Process()
+        # self.send_to_ai = TestAI()
         self.turn_counter_p1 = 0
 
     def get_action_player1(self, data):
@@ -70,8 +70,8 @@ class DetectActionForP1(threading.Thread):
 class DetectActionForP2(threading.Thread):
     def __init__(self):
         super(DetectActionForP2, self).__init__()
-        # self.send_to_ai = Process()
-        self.send_to_ai = TestAI()
+        self.send_to_ai = Process()
+        # self.send_to_ai = TestAI()
         self.turn_counter_p2 = 0
 
     def get_action_player2(self, data):
