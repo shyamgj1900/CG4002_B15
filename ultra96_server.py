@@ -113,8 +113,6 @@ class Ultra96Server(threading.Thread):
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REP)
         self.raw_data = ""
-        self.comm_eval_server = CommWithEvalServer()
-        self.comm_visualizer = CommWithVisualizer()
 
     def init_socket_connection(self):
         """
@@ -145,15 +143,6 @@ class Ultra96Server(threading.Thread):
         except Exception as e:
             print(f"Error receiving message: {e}")
 
-    def send_message(self):
-        global game_manager, player1_detected_action, player2_detected_action
-        if player1_detected_action != "" and player2_detected_action != "":
-            game_manager.detected_game_state(player1_detected_action, player2_detected_action)
-            self.comm_eval_server.send_message_to_eval_server()
-            self.comm_visualizer.send_message_to_visualizer()
-            player1_detected_action = ""
-            player2_detected_action = ""
-
     def run(self):
         """
         This is the main thread for the Ultra96 server.
@@ -161,7 +150,26 @@ class Ultra96Server(threading.Thread):
         self.init_socket_connection()
         while not exit_event.is_set():
             self.receive_message_from_laptop()
-            self.send_message()
+
+
+class BroadcastMessage(threading.Thread):
+    def __init__(self):
+        super(BroadcastMessage, self).__init__()
+        self.comm_eval_server = CommWithEvalServer()
+        self.comm_visualizer = CommWithVisualizer()
+
+    def send_message(self):
+        global game_manager, player1_detected_action, player2_detected_action
+        game_manager.detected_game_state(player1_detected_action, player2_detected_action)
+        self.comm_eval_server.send_message_to_eval_server()
+        self.comm_visualizer.send_message_to_visualizer()
+        player1_detected_action = ""
+        player2_detected_action = ""
+
+    def run(self):
+        while not exit_event.is_set():
+            if player1_detected_action != "" and player2_detected_action != "":
+                self.send_message()
 
 
 class CommWithEvalServer:
