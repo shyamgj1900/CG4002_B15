@@ -10,6 +10,7 @@ BLE_CHARACTERISTIC_UUID = "0000dfb1-0000-1000-8000-00805f9b34fb"
 WINDOW_SIZE = 10
 TIMEOUT = 0.5 # to be defined
 START = 0
+PLAYER_NUMBER = 1
 
 
 packet_queue = queue.Queue()
@@ -29,19 +30,25 @@ previous_time = 0
 
 
 #temp
-BEETLE_1 = 'D0:39:72:BF:CA:84'
+BEETLE_1 = 'D0:39:72:BF:C3:A8'
 BEETLE_2 = 'D0:39:72:BF:C1:C6'
 BEETLE_3 = 'D0:39:72:BF:C8:9B'
-# #actual beetle mac address
-# BEETLE_1 = 'D0:39:72:BF:C8:F1'
-# BEETLE_2 = 'D0:39:72:BF:CA:84' - glove
-# BEETLE_3 = 'D0:39:72:BF:CD:0C' 
-# 'D0:39:72:BF:C3:A8'
-# 'D0:39:72:BF:C8:9B' - vest
-# 'D0:39:72:BF:C1:C6' - gun
 
+# 'D0:39:72:BF:C3:A8' - glove (red)
+# BEETLE_2 = 'D0:39:72:BF:CA:84' # glove
 
-ALL_BEETLE = [BEETLE_1]
+# PLAYER 2 BEETLES
+# BEETLE_1 = # p2 wrist
+# BEETLE_2 = 'D0:39:72:BF:C8:F1'    # p1 vest
+# BEETLE_3 = 'D0:39:72:BF:CD:0C' # p1 gun
+
+# PLAYER 1 BEETLES
+# BEETLE_1 = # p1 wrist
+# BEETLE_2 = 'D0:39:72:BF:C8:9B' # p1 vest
+# BEETLE_3 = 'D0:39:72:BF:C1:C6' # p1 gun
+
+ALL_BEETLE = [BEETLE_2]
+# ALL_BEETLE = [BEETLE_1, BEETLE_2, BEETLE_3]
 
 #handshake status
 BEETLE_HANDSHAKE_STATUS = {
@@ -125,8 +132,8 @@ class NotificationDelegate(DefaultDelegate):
         self.buffer += raw_packet_data
         if(len(self.buffer) < 20):
             NUM_FRAG_PACKET[self.mac_address]+=1
-            print("data fragmented")
-            self.buffer = b''
+            # print("data fragmented")
+            # self.buffer = b''
         
         else:
             #there is  a full packet
@@ -139,61 +146,83 @@ class NotificationDelegate(DefaultDelegate):
     def handle_packet_data(self, raw_packet_data):
         #check validity by crc
         # print("in handle_packet_data")
+        #password: yscd100Plus3/1
+        # print("before:" ,len(raw_packet_data))
+        if len(raw_packet_data)< 20:
+            return
+
         if not self.CRCcheck(raw_packet_data):
             NUM_DROP_PACKET[self.mac_address] +=1
             return
 
-        #unpack for handling 
-        packetFormat = 'c'+ (19)*'B'
-        unpacked_packet = struct.unpack(packetFormat, raw_packet_data[0:20])
+        # #unpack for handling 
+        # packetFormat = 'c' + 19*'B'
+        # unpacked_packet = struct.unpack(packetFormat, raw_packet_data[0:20])
         
-        #convert packet type from byte to char
-        my_list = list(unpacked_packet)
-        my_list[0] = my_list[0].decode("utf-8")
-        unpacked_packet = tuple(my_list)
+        # #convert packet type from byte to char
+        # my_list = list(unpacked_packet)
+        
+        # my_list[0] = my_list[0].decode("utf-8")
+        # # print(my_list)
+        # unpacked_packet = tuple(my_list)
+        # print(raw_packet_data[0])
+        try:
+            #bluno handshake ACK
+            if(raw_packet_data[0] == 65):
+                BEETLE_HANDSHAKE_STATUS[self.mac_address] = True
+                send_HANDSHAKE_ACK_flag[self.mac_address] = True
+                print(BEETLE_HANDSHAKE_STATUS[self.mac_address] )
+                        
+            #handshake completed
+            elif BEETLE_HANDSHAKE_STATUS[self.mac_address]:
+                #identify packet type and handle respectively
+                #handle wrist data, W = 87
+                # print("AM HERE")
+                if(raw_packet_data[0]== 87):
+                    self.unpack_wrist_data(raw_packet_data)
+                #handle IR_data: gun data, G = 71 || vest data, V = 86
+                elif(raw_packet_data[0]== 71 or raw_packet_data[0]== 86):
+                    self.unpack_IR_data(raw_packet_data)
+                #is corrupted and just dropped
+                else: 
+                    NUM_DROP_PACKET[self.mac_address] +=1
 
-        #bluno handshake ACK
-        if(unpacked_packet[0] == 'A'):
-            BEETLE_HANDSHAKE_STATUS[self.mac_address] = True
-            send_HANDSHAKE_ACK_flag[self.mac_address] = True
-            print(BEETLE_HANDSHAKE_STATUS[self.mac_address] )
-                    
-        #handshake completed
-        elif BEETLE_HANDSHAKE_STATUS[self.mac_address]:
-            #identify packet type and handle respectively
-            #handle wrist data, W = 87
-            if(unpacked_packet[0]== 'W'):
-                self.unpack_wrist_data(unpacked_packet)
-            #handle IR_data: gun data, G = 71 || vest data, V = 86
-            elif(unpacked_packet[0]== 'G' or raw_packet_data[0]== 'V'):
-                self.unpack_IR_data(unpacked_packet)
-            #is corrupted and just dropped
-            else: 
+
+            #reset if the 20bytes is corrutped data and dropped
+            else:
+                BEETLE_RESET_STATUS[self.mac_address] = True
                 NUM_DROP_PACKET[self.mac_address] +=1
+        except Exception as e: 
+            print("handle_packet_data exception: ", e)
 
 
-        #reset if the 20bytes is corrutped data and dropped
-        else:
-            BEETLE_RESET_STATUS[self.mac_address] = True
-            NUM_DROP_PACKET[self.mac_address] +=1
 
 
     #CRCcheck: This function calculates and compare checksum to ensure packet is not corrupted
     def CRCcheck(self, raw_packet_data):
         checksum = Crc8.calc(raw_packet_data[0:19])
+        # print("inside:" ,len(raw_packet_data))
         if checksum == raw_packet_data[19]:
             return True
         return False
 
-    def unpack_wrist_data(self, unpacked_packet):
-        try: 
+    def unpack_wrist_data(self, raw_packet_data):
+        try:
             lp_client.getData(unpacked_packet)
             NUM_GOOD_PACKET[self.mac_address] += 1
         except Exception as e:
             print("wrist.exception: ", e)
     
-    def unpack_IR_data(self, unpacked_packet):
+    def unpack_IR_data(self, raw_packet_data):
         try: 
+            packetFormat = '!c'+ 19*'B'
+            
+            unpacked_packet = struct.unpack(packetFormat, raw_packet_data)
+            my_list = list(unpacked_packet)
+            my_list[0] = my_list[0].decode("utf-8")
+            unpacked_packet = tuple(my_list)
+            # print("unpacked_packet: ", unpacked_packet)
+
             #drop duplicate packets
             if(unpacked_packet[1]== self.sequence):
                 NUM_DROP_PACKET[self.mac_address] += 1
@@ -284,7 +313,7 @@ class beetleThread():
                     self.reset()
 
                 
-                if self.beetle_periobj.waitForNotifications(2.0):
+                if self.beetle_periobj.waitForNotifications(3.0):
                     #return handshake ack
                     pad = (0,)
                     padding = pad *19
@@ -292,7 +321,7 @@ class beetleThread():
                     if(send_HANDSHAKE_ACK_flag[self.beetle_periobj.addr] == True):
                         self.serial_characteristic.write(struct.pack(packetFormat, bytes('A', 'utf-8'), *padding),withResponse=False)
                         # print('A for handshake sent : ', self.beetle_periobj.addr)
-                        send_HANDSHAKE_ACK_flag[self.beetle_periobj.addr] = False                
+                        # send_HANDSHAKE_ACK_flag[self.beetle_periobj.addr] = False                
             return True
 
         except BTLEDisconnectError:
@@ -378,7 +407,7 @@ if __name__=='__main__':
     lp_client = laptop_client_ext_comms.LaptopClient()
     lp_client.start()
     beetles = []
-    # laptopClient = laptop_client_copy.LaptopClient
+    # laptopClient = laptop_client.LaptopClient
     #declare relay
     # # make the send to u96 a new thread with queue
     # while True:
