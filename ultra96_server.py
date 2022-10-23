@@ -191,9 +191,11 @@ def main():
     u96_server = Ultra96Server()
     detect_action_for_p1 = DetectActionForP1()
     detect_action_for_p2 = DetectActionForP2()
+    broadcast_message = BroadcastMessage()
     u96_server.start()
     detect_action_for_p1.start()
     detect_action_for_p2.start()
+    broadcast_message.start()
 
 
 if __name__ == "__main__":
