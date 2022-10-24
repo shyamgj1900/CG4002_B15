@@ -18,6 +18,8 @@ player1_action_q = Queue()
 player2_action_q = Queue()
 player1_detected_action = ""
 player2_detected_action = ""
+player1_hit = False
+player2_hit = False
 eval_message_event = threading.Event()
 visualizer_message_event = threading.Event()
 detect_action_event = threading.Event()
@@ -54,7 +56,11 @@ class DetectActionForP1(threading.Thread):
                 return action
             elif action == "":
                 return ""
-        return
+        elif data[0] == "V1":
+            global player1_hit
+            player1_hit = True
+            return ""
+        return ""
 
     def run(self):
         global player1_detected_action
@@ -94,7 +100,11 @@ class DetectActionForP2(threading.Thread):
                 return action
             elif action == "":
                 return ""
-        return
+        elif data[0] == "V2":
+            global player2_hit
+            player2_hit = True
+            return ""
+        return ""
 
     def run(self):
         global player2_detected_action
@@ -146,13 +156,16 @@ class Ultra96Server(threading.Thread):
             print(f"Error receiving message: {e}")
 
     def send_message(self):
-        global game_manager, player1_detected_action, player2_detected_action
+        global player1_detected_action, player2_detected_action, player1_hit, player2_hit
         if player1_detected_action != "" and player2_detected_action != "":
-            game_manager.detected_game_state(player1_detected_action, player2_detected_action)
+            if player1_detected_action == "shoot" or player2_detected_action == "shoot":
+                game_manager.detected_game_state(player1_detected_action, player2_detected_action, player1_hit, player2_hit)
             self.comm_eval_server.send_message_to_eval_server()
             self.comm_visualizer.send_message_to_visualizer()
             player1_detected_action = ""
             player2_detected_action = ""
+            player1_hit = False
+            player2_hit = False
 
     def run(self):
         """
