@@ -15,7 +15,7 @@ BLE_CHARACTERISTIC_UUID = "0000dfb1-0000-1000-8000-00805f9b34fb"
 WINDOW_SIZE = 10
 TIMEOUT = 0.5 # to be defined
 START = 0
-PLAYER_NUMBER = 1
+PLAYER_NUMBER = '2'
 
 
 packet_queue = queue.Queue()
@@ -34,25 +34,17 @@ current_time = 0
 previous_time = 0
 
 
-#temp
-BEETLE_1 = 'D0:39:72:BF:C3:A8'
-BEETLE_2 = 'D0:39:72:BF:C1:C6'
-BEETLE_3 = 'D0:39:72:BF:C8:9B'
-
-# 'D0:39:72:BF:C3:A8' - glove (red)
-# BEETLE_2 = 'D0:39:72:BF:CA:84' # glove
-
 # PLAYER 2 BEETLES
-# BEETLE_1 = # p2 wrist
-# BEETLE_2 = 'D0:39:72:BF:C8:F1'    # p1 vest
-# BEETLE_3 = 'D0:39:72:BF:CD:0C' # p1 gun
+BEETLE_1 = 'D0:39:72:BF:CA:84'# p2 wrist
+BEETLE_2 = 'D0:39:72:BF:C8:F1'    # p1 vest
+BEETLE_3 = 'D0:39:72:BF:CD:0C' # p1 gun
 
 # PLAYER 1 BEETLES
-# BEETLE_1 = # p1 wrist
+# BEETLE_1 = 'D0:39:72:BF:C3:A8' # p1 wrist
 # BEETLE_2 = 'D0:39:72:BF:C8:9B' # p1 vest
 # BEETLE_3 = 'D0:39:72:BF:C1:C6' # p1 gun
 
-ALL_BEETLE = [BEETLE_2]
+ALL_BEETLE = [BEETLE_1]
 # ALL_BEETLE = [BEETLE_1, BEETLE_2, BEETLE_3]
 
 #handshake status
@@ -218,7 +210,7 @@ class NotificationDelegate(DefaultDelegate):
             
             unpacked_packet = struct.unpack(packetFormat, raw_packet_data)
             my_list = list(unpacked_packet)
-            my_list[0] = my_list[0].decode("utf-8")
+            my_list[0] = my_list[0].decode("utf-8") + PLAYER_NUMBER
             unpacked_packet = tuple(my_list)
             # print("unpacked_packet: ", unpacked_packet[0:7])
             lp_client.getData(unpacked_packet[0:7])
@@ -232,7 +224,7 @@ class NotificationDelegate(DefaultDelegate):
             
             unpacked_packet = struct.unpack(packetFormat, raw_packet_data)
             my_list = list(unpacked_packet)
-            my_list[0] = my_list[0].decode("utf-8")
+            my_list[0] = my_list[0].decode("utf-8") + PLAYER_NUMBER
             unpacked_packet = tuple(my_list)
             # print("unpacked_packet: ", unpacked_packet)
 
