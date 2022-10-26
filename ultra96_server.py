@@ -160,6 +160,8 @@ class Ultra96Server(threading.Thread):
         if player1_detected_action != "" and player2_detected_action != "":
             if player1_detected_action == "shoot" or player2_detected_action == "shoot":
                 game_manager.detected_game_state(player1_detected_action, player2_detected_action, player1_hit, player2_hit)
+            else:
+                game_manager.detected_game_state(player1_detected_action, player2_detected_action)
             self.comm_eval_server.send_message_to_eval_server()
             self.comm_visualizer.send_message_to_visualizer()
             player1_detected_action = ""
