@@ -161,7 +161,6 @@ class BroadcastMessage(threading.Thread):
         self.comm_visualizer = CommWithVisualizer()
 
     def send_message(self):
-        global game_manager, player1_detected_action, player2_detected_action
         # if player1_detected_action != "" and player2_detected_action != "":
         p1_action = player1_detected_action.get()
         p2_action = player2_detected_action.get()
@@ -176,6 +175,7 @@ class BroadcastMessage(threading.Thread):
     def run(self):
         while not exit_event.is_set():
             self.send_message()
+            print("AFTER MSG SENT")
 
 
 class CommWithEvalServer:
@@ -187,7 +187,9 @@ class CommWithEvalServer:
         global game_manager
         print("sending message to eval server")
         self.updated_state = self.eval_client.handle_eval_server(game_manager.get_dict())
+        print(f"Updated state: {self.updated_state}")
         game_manager.update_game_state(self.updated_state)
+        print("AFTER UPDATING STATE")
 
 
 class CommWithVisualizer:
