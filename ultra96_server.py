@@ -145,6 +145,21 @@ class Ultra96Server(threading.Thread):
         except Exception as e:
             print(f"Error receiving message: {e}")
 
+    def run(self):
+        """
+        This is the main thread for the Ultra96 server.
+        """
+        self.init_socket_connection()
+        while not exit_event.is_set():
+            self.receive_message_from_laptop()
+
+
+class BroadcastMessage(threading.Thread):
+    def __init__(self):
+        super(BroadcastMessage, self).__init__()
+        self.comm_eval_server = CommWithEvalServer()
+        self.comm_visualizer = CommWithVisualizer()
+
     def send_message(self):
         global game_manager, player1_detected_action, player2_detected_action
         if player1_detected_action != "" and player2_detected_action != "":
@@ -155,12 +170,7 @@ class Ultra96Server(threading.Thread):
             player2_detected_action = ""
 
     def run(self):
-        """
-        This is the main thread for the Ultra96 server.
-        """
-        self.init_socket_connection()
         while not exit_event.is_set():
-            self.receive_message_from_laptop()
             self.send_message()
 
 
@@ -191,9 +201,11 @@ def main():
     u96_server = Ultra96Server()
     detect_action_for_p1 = DetectActionForP1()
     detect_action_for_p2 = DetectActionForP2()
+    broadcast_message = BroadcastMessage()
     u96_server.start()
     detect_action_for_p1.start()
     detect_action_for_p2.start()
+    broadcast_message.start()
 
 
 if __name__ == "__main__":
