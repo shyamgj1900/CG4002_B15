@@ -54,7 +54,7 @@ class DetectActionForP1(threading.Thread):
                 return action
             elif action == "":
                 return ""
-        return
+        return ""
 
     def run(self):
         global player1_detected_action
@@ -94,7 +94,7 @@ class DetectActionForP2(threading.Thread):
                 return action
             elif action == "":
                 return ""
-        return
+        return ""
 
     def run(self):
         global player2_detected_action
@@ -163,6 +163,8 @@ class BroadcastMessage(threading.Thread):
     def send_message(self):
         global game_manager, player1_detected_action, player2_detected_action
         if player1_detected_action != "" and player2_detected_action != "":
+            print(f"player 1 action: {player1_detected_action}")
+            print(f"player 2 action: {player2_detected_action}")
             game_manager.detected_game_state(player1_detected_action, player2_detected_action)
             self.comm_eval_server.send_message_to_eval_server()
             self.comm_visualizer.send_message_to_visualizer()
@@ -181,6 +183,7 @@ class CommWithEvalServer:
 
     def send_message_to_eval_server(self):
         global game_manager
+        print("sending message to eval server")
         self.updated_state = self.eval_client.handle_eval_server(game_manager.get_dict())
         game_manager.update_game_state(self.updated_state)
 
@@ -190,6 +193,7 @@ class CommWithVisualizer:
         self.visualizer_publish = VisualizerBroadcast()
 
     def send_message_to_visualizer(self):
+        print("sending message to viz")
         self.visualizer_publish.publish_message(json.dumps(game_manager.get_dict()))
 
 
