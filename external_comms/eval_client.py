@@ -53,18 +53,15 @@ class EvalClient:
         encrypted and then sends the message through sockets.
         """
         try:
-            print("before encrypt message")
             json_message = json.dumps(self.message_dict)
             encrypted_message = self.encrypt_message(json_message)
             msg_length = str(len(encrypted_message)) + "_"
             self.client_out.send(msg_length.encode(FORMAT) + encrypted_message)
-            print("Sent encrypted msg")
         except Exception as err:
             print(f"Error sending encrypted message: {err}")
 
     def receive_game_state(self):
         try:
-            print("before recv from eval server")
             data = b''
             while not data.endswith(b'_'):
                 _d = self.client_out.recv(1)
@@ -83,7 +80,6 @@ class EvalClient:
                 data += _d
             msg = data.decode("utf8")
             return json.loads(msg)
-            print("recv msg from eval server")
         except Exception as err:
             print(f"Error receiving message from eval server: {err}")
 

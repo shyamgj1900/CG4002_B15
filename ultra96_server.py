@@ -113,8 +113,6 @@ class Ultra96Server(threading.Thread):
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REP)
         self.raw_data = ""
-        self.comm_eval_server = CommWithEvalServer()
-        self.comm_visualizer = CommWithVisualizer()
 
     def init_socket_connection(self):
         """
@@ -164,18 +162,13 @@ class BroadcastMessage(threading.Thread):
         # if player1_detected_action != "" and player2_detected_action != "":
         p1_action = player1_detected_action.get()
         p2_action = player2_detected_action.get()
-        print(f"player 1 action: {p1_action}")
-        print(f"player 2 action: {p2_action}")
         game_manager.detected_game_state(p1_action, p2_action)
         self.comm_eval_server.send_message_to_eval_server()
         self.comm_visualizer.send_message_to_visualizer()
-        # player1_detected_action = ""
-        # player2_detected_action = ""
 
     def run(self):
         while not exit_event.is_set():
             self.send_message()
-            print("AFTER MSG SENT")
 
 
 class CommWithEvalServer:
@@ -185,11 +178,8 @@ class CommWithEvalServer:
 
     def send_message_to_eval_server(self):
         global game_manager
-        print("sending message to eval server")
         self.updated_state = self.eval_client.handle_eval_server(game_manager.get_dict())
-        print(f"Updated state: {self.updated_state}")
         game_manager.update_game_state(self.updated_state)
-        print("AFTER UPDATING STATE")
 
 
 class CommWithVisualizer:
@@ -197,7 +187,6 @@ class CommWithVisualizer:
         self.visualizer_publish = VisualizerBroadcast()
 
     def send_message_to_visualizer(self):
-        print("sending message to viz")
         self.visualizer_publish.publish_message(json.dumps(game_manager.get_dict()))
 
 
