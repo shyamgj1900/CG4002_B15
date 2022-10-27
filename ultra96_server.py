@@ -16,8 +16,8 @@ from external_comms.visualizer_broadcast import VisualizerBroadcast
 game_manager = GameState()
 player1_action_q = Queue()
 player2_action_q = Queue()
-player1_detected_action = ""
-player2_detected_action = ""
+player1_detected_action = Queue()
+player2_detected_action = Queue()
 eval_message_event = threading.Event()
 visualizer_message_event = threading.Event()
 detect_action_event = threading.Event()
@@ -64,7 +64,7 @@ class DetectActionForP1(threading.Thread):
                 # print(f"In run player 1: {action}")
                 action = self.get_action_player1(data)
                 if action != "":
-                    player1_detected_action = action
+                    player1_detected_action.put(action)
 
 
 class DetectActionForP2(threading.Thread):
@@ -104,7 +104,7 @@ class DetectActionForP2(threading.Thread):
                 # print(f"In run player 2: {action}")
                 action = self.get_action_player2(data)
                 if action != "":
-                    player2_detected_action = action
+                    player2_detected_action.put(action)
 
 
 class Ultra96Server(threading.Thread):
@@ -162,14 +162,16 @@ class BroadcastMessage(threading.Thread):
 
     def send_message(self):
         global game_manager, player1_detected_action, player2_detected_action
-        if player1_detected_action != "" and player2_detected_action != "":
-            print(f"player 1 action: {player1_detected_action}")
-            print(f"player 2 action: {player2_detected_action}")
-            game_manager.detected_game_state(player1_detected_action, player2_detected_action)
-            self.comm_eval_server.send_message_to_eval_server()
-            self.comm_visualizer.send_message_to_visualizer()
-            player1_detected_action = ""
-            player2_detected_action = ""
+        # if player1_detected_action != "" and player2_detected_action != "":
+        p1_action = player1_detected_action.get()
+        p2_action = player2_detected_action.get()
+        print(f"player 1 action: {p1_action}")
+        print(f"player 2 action: {p2_action}")
+        game_manager.detected_game_state(p1_action, p2_action)
+        self.comm_eval_server.send_message_to_eval_server()
+        self.comm_visualizer.send_message_to_visualizer()
+        # player1_detected_action = ""
+        # player2_detected_action = ""
 
     def run(self):
         while not exit_event.is_set():
