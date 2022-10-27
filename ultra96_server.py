@@ -22,6 +22,10 @@ eval_message_event = threading.Event()
 visualizer_message_event = threading.Event()
 detect_action_event = threading.Event()
 exit_event = threading.Event()
+start_time_packet = 0
+start_time_action_detect = 0
+end_time_action_detect = 0
+packet_index = 0
 
 PORT_OUT = 0
 IP_SERVER = ""
@@ -35,6 +39,7 @@ class DetectActionForP1(threading.Thread):
         self.turn_counter_p1 = 0
 
     def get_action_player1(self, data):
+        global start_time_packet, start_time_action_detect, end_time_action_detect
         if data[0] == "G1":
             action = "shoot"
             self.turn_counter_p1 += 1
@@ -48,9 +53,13 @@ class DetectActionForP1(threading.Thread):
                 print("Disconnecting BYE.....")
                 exit_event.set()
             if action != "":
+                end_time_action_detect = time.time()
                 self.turn_counter_p1 += 1
                 print(f"Detected action for player 1: {action}")
                 print(f"Turn count for player 1: {self.turn_counter_p1}")
+                print(f"Total time from packet recv to detection {start_time_packet - end_time_action_detect}")
+                print(f"Time to receive all 10 packets {start_time_packet - start_time_action_detect}")
+                print(f"Total time to detect action {start_time_action_detect - end_time_action_detect}")
                 return action
             elif action == "":
                 return ""
@@ -129,7 +138,7 @@ class Ultra96Server(threading.Thread):
         This function receives a message from the laptop client through message queues and sends an ACK message back to
         the laptop client.
         """
-        global player1_action_q, player2_action_q
+        global player1_action_q, player2_action_q, start_time_packet, start_time_action_detect, packet_index
         try:
             padded_raw_data = self.socket.recv()
             self.raw_data = unpad(padded_raw_data, AES.block_size)
@@ -137,6 +146,12 @@ class Ultra96Server(threading.Thread):
             self.raw_data = json.loads(self.raw_data)
             if self.raw_data[0] == 'G1' or self.raw_data[0] == 'W1' or self.raw_data[0] == 'V1':
                 player1_action_q.put(self.raw_data)
+                packet_index += 1
+                if packet_index == 1:
+                    start_time_packet = time.time()
+                if packet_index == 10:
+                    start_time_action_detect = time.time()
+                    packet_index = 0
             elif self.raw_data[0] == 'G2' or self.raw_data[0] == 'W2' or self.raw_data[0] == 'V2':
                 player2_action_q.put(self.raw_data)
             self.socket.send(b"ACK")
