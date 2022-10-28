@@ -18,6 +18,10 @@ player1_action_q = Queue()
 player2_action_q = Queue()
 player1_detected_action = Queue()
 player2_detected_action = Queue()
+p1_beetle_id = Queue()
+p2_beetle_id = Queue()
+p1_connection_status = Queue()
+p2_connection_status = Queue()
 eval_message_event = threading.Event()
 visualizer_message_event = threading.Event()
 detect_action_event = threading.Event()
@@ -145,15 +149,23 @@ class Ultra96Server(threading.Thread):
             self.raw_data = self.raw_data.decode("utf8")
             self.raw_data = json.loads(self.raw_data)
             if self.raw_data[0] == 'G1' or self.raw_data[0] == 'W1' or self.raw_data[0] == 'V1':
-                player1_action_q.put(self.raw_data)
-                packet_index += 1
-                if packet_index == 1:
-                    start_time_packet = time.time()
-                if packet_index == 10:
-                    start_time_action_detect = time.time()
-                    packet_index = 0
+                if self.raw_data[1] == "success" or self.raw_data[1] == "error":
+                    p1_beetle_id.put(self.raw_data[0])
+                    p1_connection_status.put(self.raw_data[1])
+                else:
+                    player1_action_q.put(self.raw_data)
+                    packet_index += 1
+                    if packet_index == 1:
+                        start_time_packet = time.time()
+                    if packet_index == 10:
+                        start_time_action_detect = time.time()
+                        packet_index = 0
             elif self.raw_data[0] == 'G2' or self.raw_data[0] == 'W2' or self.raw_data[0] == 'V2':
-                player2_action_q.put(self.raw_data)
+                if self.raw_data[1] == "success" or self.raw_data[1] == "error":
+                    p2_beetle_id.put(self.raw_data[0])
+                    p2_connection_status.put(self.raw_data[1])
+                else:
+                    player2_action_q.put(self.raw_data)
             self.socket.send(b"ACK")
         except Exception as e:
             print(f"Error receiving message: {e}")
@@ -181,9 +193,24 @@ class BroadcastMessage(threading.Thread):
         self.comm_eval_server.send_message_to_eval_server()
         self.comm_visualizer.send_message_to_visualizer()
 
+    def send_connection_status_p1(self):
+        p1_beetle = p1_beetle_id.get()
+        p1_conn = p1_connection_status.get()
+        self.comm_visualizer.send_message_to_visualizer(p1_beetle, p1_conn)
+
+    def send_connection_status_p2(self):
+        p2_beetle = p2_beetle_id.get()
+        p2_conn = p2_connection_status.get()
+        self.comm_visualizer.send_message_to_visualizer(p2_beetle, p2_conn)
+
     def run(self):
         while not exit_event.is_set():
-            self.send_message()
+            if player1_detected_action.qsize() != 0 and player2_detected_action.qsize() != 0:
+                self.send_message()
+            if p1_beetle_id.qsize() != 0:
+                self.send_connection_status_p1()
+            if p2_beetle_id.qsize() != 0:
+                self.send_connection_status_p2()
 
 
 class CommWithEvalServer:
@@ -201,8 +228,11 @@ class CommWithVisualizer:
     def __init__(self):
         self.visualizer_publish = VisualizerBroadcast()
 
-    def send_message_to_visualizer(self):
-        self.visualizer_publish.publish_message(json.dumps(game_manager.get_dict()))
+    def send_message_to_visualizer(self, beetle_id="", status=""):
+        if beetle_id != "" and status != "":
+            self.visualizer_publish.publish_message(f"{beetle_id} is {status}")
+        else:
+            self.visualizer_publish.publish_message(json.dumps(game_manager.get_dict()))
 
 
 def main():
