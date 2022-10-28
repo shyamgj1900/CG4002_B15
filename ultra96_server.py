@@ -149,7 +149,7 @@ class Ultra96Server(threading.Thread):
             self.raw_data = self.raw_data.decode("utf8")
             self.raw_data = json.loads(self.raw_data)
             if self.raw_data[0] == 'G1' or self.raw_data[0] == 'W1' or self.raw_data[0] == 'V1':
-                if self.raw_data[1] == "success" or self.raw_data[1] == "error":
+                if self.raw_data[1] == "connected" or self.raw_data[1] == "disconnected":
                     p1_beetle_id.put(self.raw_data[0])
                     p1_connection_status.put(self.raw_data[1])
                 else:
@@ -161,7 +161,7 @@ class Ultra96Server(threading.Thread):
                         start_time_action_detect = time.time()
                         packet_index = 0
             elif self.raw_data[0] == 'G2' or self.raw_data[0] == 'W2' or self.raw_data[0] == 'V2':
-                if self.raw_data[1] == "success" or self.raw_data[1] == "error":
+                if self.raw_data[1] == "connected" or self.raw_data[1] == "disconnected":
                     p2_beetle_id.put(self.raw_data[0])
                     p2_connection_status.put(self.raw_data[1])
                 else:
