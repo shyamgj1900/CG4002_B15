@@ -16,6 +16,8 @@ from external_comms.visualizer_broadcast import VisualizerBroadcast
 game_manager = GameState()
 player1_action_q = Queue()
 player2_action_q = Queue()
+player1_hit = False
+player2_hit = False
 player1_detected_action = Queue()
 player2_detected_action = Queue()
 p1_beetle_id = Queue()
@@ -67,6 +69,10 @@ class DetectActionForP1(threading.Thread):
                 return action
             elif action == "":
                 return ""
+        elif data[0] == "V1":
+            global player1_hit
+            player1_hit = True
+            return ""
         return ""
 
     def run(self):
@@ -107,6 +113,10 @@ class DetectActionForP2(threading.Thread):
                 return action
             elif action == "":
                 return ""
+        elif data[0] == "V2":
+            global player2_hit
+            player2_hit = True
+            return ""
         return ""
 
     def run(self):
@@ -187,11 +197,17 @@ class BroadcastMessage(threading.Thread):
 
     def send_message(self):
         # if player1_detected_action != "" and player2_detected_action != "":
+        global player1_hit, player2_hit
         p1_action = player1_detected_action.get()
         p2_action = player2_detected_action.get()
-        game_manager.detected_game_state(p1_action, p2_action)
+        if p1_action == "shoot" or p2_action == "shoot":
+            game_manager.detected_game_state(p1_action, p2_action, player1_hit, player2_hit)
+        else:
+            game_manager.detected_game_state(p1_action, p2_action)
         self.comm_eval_server.send_message_to_eval_server()
         self.comm_visualizer.send_message_to_visualizer()
+        player1_hit = False
+        player2_hit = False
 
     def send_connection_status_p1(self):
         p1_beetle = p1_beetle_id.get()
