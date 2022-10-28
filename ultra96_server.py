@@ -61,9 +61,9 @@ class DetectActionForP1(threading.Thread):
                 self.turn_counter_p1 += 1
                 print(f"Detected action for player 1: {action}")
                 print(f"Turn count for player 1: {self.turn_counter_p1}")
-                print(f"Total time from packet recv to detection {start_time_packet - end_time_action_detect}")
-                print(f"Time to receive all 10 packets {start_time_packet - start_time_action_detect}")
-                print(f"Total time to detect action {start_time_action_detect - end_time_action_detect}")
+                print(f"Total time from packet recv to detection {end_time_action_detect - start_time_packet}")
+                print(f"Time to receive all 10 packets {start_time_action_detect - start_time_packet}")
+                print(f"Total time to detect action {end_time_action_detect - start_time_action_detect}")
                 return action
             elif action == "":
                 return ""
