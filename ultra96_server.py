@@ -61,10 +61,7 @@ class DetectActionFromAI(threading.Thread):
                     grenade_status = self.check_grenade_stat.receive_message()
                     if grenade_status == "player 2 hit":
                         global player2_hit
-                        print("In player 2 hit")
                         player2_hit = True
-                    elif grenade_status == "player 2 not hit":
-                        print("In player 2 not hit")
                 return action
             elif action == "":
                 return ""
