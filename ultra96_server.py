@@ -41,11 +41,11 @@ class DetectActionForP1(threading.Thread):
     def __init__(self):
         super(DetectActionForP1, self).__init__()
         self.send_to_ai = Process()
+        self.check_grenade_stat = VisualizerBroadcast()
         # self.send_to_ai = TestAI()
         self.turn_counter_p1 = 0
 
     def get_action_player1(self, data):
-        global start_time_packet, start_time_action_detect, end_time_action_detect
         if data[0] == "G1":
             action = "shoot"
             self.turn_counter_p1 += 1
@@ -59,13 +59,17 @@ class DetectActionForP1(threading.Thread):
                 print("Disconnecting BYE.....")
                 exit_event.set()
             if action != "":
-                end_time_action_detect = time.time()
                 self.turn_counter_p1 += 1
                 print(f"Detected action for player 1: {action}")
                 print(f"Turn count for player 1: {self.turn_counter_p1}")
-                print(f"Total time from packet recv to detection {end_time_action_detect - start_time_packet}")
-                print(f"Time to receive all 10 packets {start_time_action_detect - start_time_packet}")
-                print(f"Total time to detect action {end_time_action_detect - start_time_action_detect}")
+                if action == "grenade":
+                    msg = "p1 " + action
+                    self.check_grenade_stat.publish_message(msg)
+                    time.sleep(1)
+                    grenade_status = self.check_grenade_stat.receive_message()
+                    if grenade_status == "player 2 hit":
+                        global player2_hit
+                        player2_hit = True
                 return action
             elif action == "":
                 return ""
@@ -84,12 +88,15 @@ class DetectActionForP1(threading.Thread):
                 action = self.get_action_player1(data)
                 if action != "":
                     player1_detected_action.put(action)
+                    while not player1_action_q.empty():
+                        data = player1_action_q.get()   # clear any residual data packets
 
 
 class DetectActionForP2(threading.Thread):
     def __init__(self):
         super(DetectActionForP2, self).__init__()
         self.send_to_ai = Process()
+        self.check_grenade_stat = VisualizerBroadcast()
         # self.send_to_ai = TestAI()
         self.turn_counter_p2 = 0
 
@@ -110,6 +117,14 @@ class DetectActionForP2(threading.Thread):
                 self.turn_counter_p2 += 1
                 print(f"Detected action for Player 2: {action}")
                 print(f"Turn count for player 2: {self.turn_counter_p2}")
+                if action == "grenade":
+                    msg = "p2 " + action
+                    self.check_grenade_stat.publish_message(msg)
+                    time.sleep(1)
+                    grenade_status = self.check_grenade_stat.receive_message()
+                    if grenade_status == "player 1 hit":
+                        global player1_hit
+                        player1_hit = True
                 return action
             elif action == "":
                 return ""
@@ -128,6 +143,8 @@ class DetectActionForP2(threading.Thread):
                 action = self.get_action_player2(data)
                 if action != "":
                     player2_detected_action.put(action)
+                    while not player2_action_q.empty():
+                        data = player2_action_q.get()    # clear any residual data packets
 
 
 class Ultra96Server(threading.Thread):
@@ -164,12 +181,6 @@ class Ultra96Server(threading.Thread):
                     p1_connection_status.put(self.raw_data[1])
                 else:
                     player1_action_q.put(self.raw_data)
-                    packet_index += 1
-                    if packet_index == 1:
-                        start_time_packet = time.time()
-                    if packet_index == 10:
-                        start_time_action_detect = time.time()
-                        packet_index = 0
             elif self.raw_data[0] == 'G2' or self.raw_data[0] == 'W2' or self.raw_data[0] == 'V2':
                 if self.raw_data[1] == "connected" or self.raw_data[1] == "disconnected":
                     p2_beetle_id.put(self.raw_data[0])
@@ -200,7 +211,7 @@ class BroadcastMessage(threading.Thread):
         global player1_hit, player2_hit
         p1_action = player1_detected_action.get()
         p2_action = player2_detected_action.get()
-        if p1_action == "shoot" or p2_action == "shoot":
+        if p1_action == "shoot" or p2_action == "shoot" or p1_action == "grenade" or p2_action == "grenade":
             game_manager.detected_game_state(p1_action, p2_action, player1_hit, player2_hit)
         else:
             game_manager.detected_game_state(p1_action, p2_action)
