@@ -1,4 +1,5 @@
 import sys
+import time
 import threading
 import zmq
 import json
@@ -14,7 +15,10 @@ from external_comms.visualizer_broadcast import VisualizerBroadcast
 game_manager = GameState()
 detected_action_q = Queue()
 received_raw_data = ""
-detected_action = ""
+player1_detected_action = Queue()
+player1_action_q = Queue()
+player1_hit = False
+player2_hit = False
 eval_message_event = threading.Event()
 visualizer_message_event = threading.Event()
 detect_action_event = threading.Event()
@@ -29,44 +33,53 @@ class DetectActionFromAI(threading.Thread):
     def __init__(self):
         super(DetectActionFromAI, self).__init__()
         self.send_to_ai = Process()
-        self.counter = 0
-        self.turn_counter = 0
+        self.check_grenade_stat = VisualizerBroadcast()
+        # self.send_to_ai = TestAI()
+        self.turn_counter_p1 = 0
 
-    def get_action(self, action):
-        global game_manager, detected_action
-        if action[0] == "G":
-            # print(f"in u96 g: {self.raw_data}")
-            detected_action = "shoot"
-            self.turn_counter += 1
-            print(f"Detected action: {detected_action}")
-            print(f"Turn count: {self.turn_counter}")
-            game_manager.detected_game_state(detected_action)
-            self.send_to_ai.process("")
-            eval_message_event.set()
-            visualizer_message_event.set()
-        elif action[0] == "W":
-            detected_action = self.send_to_ai.process(action)
-            print(f"Received raw data: {action}")
-            if detected_action != "":
-                print(f"Detected action: {detected_action}")
-                self.turn_counter += 1
-                print(f"Detected action: {self.turn_counter}")
-                game_manager.detected_game_state(detected_action)
-                eval_message_event.set()
-                visualizer_message_event.set()
-            elif detected_action == "":
-                return
-        if detected_action == "logout" and self.turn_counter >= 19:
-            print("Disconnecting BYE.....")
-            exit_event.set()
-        return
+    def get_action_player1(self, data):
+        if data[0] == "G1":
+            action = "shoot"
+            self.turn_counter_p1 += 1
+            print(f"Detected action for player 1: {action}")
+            print(f"Turn count for player 1: {self.turn_counter_p1}")
+            return action
+        elif data[0] == "W1":
+            action = self.send_to_ai.process(data)
+            print(f"Player 1 detected action: {action}")
+            if action == "logout" and self.turn_counter_p1 > 19:
+                print("Disconnecting BYE.....")
+                exit_event.set()
+            if action != "":
+                self.turn_counter_p1 += 1
+                print(f"Detected action for player 1: {action}")
+                print(f"Turn count for player 1: {self.turn_counter_p1}")
+                if action == "grenade":
+                    msg = "p1 " + action
+                    self.check_grenade_stat.publish_message(msg)
+                    time.sleep(1)
+                    grenade_status = self.check_grenade_stat.receive_message()
+                    if grenade_status == "player 2 hit":
+                        global player2_hit
+                        player2_hit = True
+                return action
+            elif action == "":
+                return ""
+        elif data[0] == "V1":
+            global player1_hit
+            player1_hit = True
+            return ""
+        return ""
 
     def run(self):
-        global detected_action_q
+        global player1_detected_action
         while not exit_event.is_set():
-            while not detected_action_q.empty():
-                action = detected_action_q.get()
-                self.get_action(action)
+            while not player1_action_q.empty():
+                data = player1_action_q.get()
+                # print(f"In run player 1: {action}")
+                action = self.get_action_player1(data)
+                if action != "":
+                    player1_detected_action.put(action)
 
 
 class Ultra96Server(threading.Thread):
@@ -96,7 +109,7 @@ class Ultra96Server(threading.Thread):
             self.raw_data = unpad(padded_raw_data, AES.block_size)
             self.raw_data = self.raw_data.decode("utf8")
             self.raw_data = json.loads(self.raw_data)
-            detected_action_q.put(self.raw_data)
+            player1_action_q.put(self.raw_data)
             self.socket.send(b"ACK")
         except Exception as e:
             print(f"Error receiving message: {e}")
@@ -110,35 +123,51 @@ class Ultra96Server(threading.Thread):
             self.receive_message_from_laptop()
 
 
-class CommWithEvalServer(threading.Thread):
+class BroadcastMessage(threading.Thread):
     def __init__(self):
-        super(CommWithEvalServer, self).__init__()
+        super(BroadcastMessage, self).__init__()
+        self.comm_eval_server = CommWithEvalServer()
+        self.comm_visualizer = CommWithVisualizer()
+
+    def send_message(self):
+        # if player1_detected_action != "" and player2_detected_action != "":
+        global player1_hit, player2_hit
+        p1_action = player1_detected_action.get()
+        if p1_action == "shoot" or p1_action == "grenade":
+            game_manager.detected_game_state(p1_action, 'none', player1_hit, player2_hit)
+        else:
+            game_manager.detected_game_state(p1_action, 'none')
+        self.comm_eval_server.send_message_to_eval_server()
+        self.comm_visualizer.send_message_to_visualizer()
+        player1_hit = False
+        player2_hit = False
+
+    def run(self):
+        while not exit_event.is_set():
+            if player1_detected_action.qsize() != 0:
+                self.send_message()
+
+
+class CommWithEvalServer:
+    def __init__(self):
         self.eval_client = EvalClient(IP_SERVER, PORT_OUT)
         self.updated_state = {}
 
-    def run(self):
+    def send_message_to_eval_server(self):
         global game_manager
-        while not exit_event.is_set():
-            message_received = eval_message_event.wait()
-            if message_received:
-                self.updated_state = self.eval_client.handle_eval_server(game_manager.get_dict())
-                game_manager.update_game_state(self.updated_state)
-                eval_message_event.clear()
+        self.updated_state = self.eval_client.handle_eval_server(game_manager.get_dict())
+        game_manager.update_game_state(self.updated_state)
 
 
-class CommWithVisualizer(threading.Thread):
+class CommWithVisualizer:
     def __init__(self):
-        super(CommWithVisualizer, self).__init__()
         self.visualizer_publish = VisualizerBroadcast()
 
-    def run(self):
-        global game_manager
-        global detected_action
-        while not exit_event.is_set():
-            message_received = visualizer_message_event.wait()
-            if message_received:
-                self.visualizer_publish.publish_message(json.dumps(game_manager.get_dict()))
-                visualizer_message_event.clear()
+    def send_message_to_visualizer(self, beetle_id="", status=""):
+        if beetle_id != "" and status != "":
+            self.visualizer_publish.publish_message(f"{beetle_id} is {status}")
+        else:
+            self.visualizer_publish.publish_message(json.dumps(game_manager.get_dict()))
 
 
 def main():
@@ -147,13 +176,11 @@ def main():
     PORT_OUT = sys.argv[2]
     PORT_OUT = int(PORT_OUT)
     u96_server = Ultra96Server()
-    detect_action_from_ai = DetectActionFromAI()
-    comm_eval_server = CommWithEvalServer()
-    comm_visualizer = CommWithVisualizer()
+    detect_action_for_p1 = DetectActionFromAI()
+    broadcast_message = BroadcastMessage()
     u96_server.start()
-    detect_action_from_ai.start()
-    comm_eval_server.start()
-    comm_visualizer.start()
+    detect_action_for_p1.start()
+    broadcast_message.start()
 
 
 if __name__ == "__main__":

@@ -13,15 +13,30 @@ class GameState:
         data = {'p1': self.player1.get_dict(), 'p2': self.player2.get_dict()}
         return data
 
-    def detected_game_state(self, new_action):
+    # def detected_game_state(self, new_action):
+    #     """
+    #     This function updates the players game state based on the action it has received from the client side. (For now
+    #     this function only updates game state based on 1 player mode).
+    #     """
+    #     player1_valid = self.player1.action_is_valid(new_action)
+    #     # player2_valid = self.player2.action_is_valid(new_action)
+    #     self.player1.update(new_action, 'none', player1_valid, False)
+    #     self.player2.update('none', new_action, False, player1_valid)
+
+    def detected_game_state(self, p1_action, p2_action, p1_hit_valid=False, p2_hit_valid=False):
         """
-        This function updates the players game state based on the action it has received from the client side. (For now
-        this function only updates game state based on 1 player mode).
+        This function updates the players game state based on the action it has received from the client side.
         """
-        player1_valid = self.player1.action_is_valid(new_action)
-        # player2_valid = self.player2.action_is_valid(new_action)
-        self.player1.update(new_action, 'none', player1_valid, False)
-        self.player2.update('none', new_action, False, player1_valid)
+        player1_action_valid = self.player1.action_is_valid(p1_action)
+        player2_action_valid = self.player2.action_is_valid(p2_action)
+        if player2_action_valid and (p2_action == "shoot" or p2_action == "grenade"):
+            self.player1.update(p1_action, p2_action, player1_action_valid, p2_hit_valid)
+        else:
+            self.player1.update(p1_action, p2_action, player1_action_valid, player2_action_valid)
+        if player1_action_valid and (p1_action == "shoot" or p1_action == "grenade"):
+            self.player2.update(p2_action, p1_action, player2_action_valid, p1_hit_valid)
+        else:
+            self.player2.update(p2_action, p1_action, player2_action_valid, player1_action_valid)
 
     def update_game_state(self, updated_state):
         player1_dict = updated_state['p1']
