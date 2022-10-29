@@ -10,6 +10,7 @@ from scipy import stats, signal
 from tensorflow.keras.models import load_model
 # from sklearn.preprocessing import StandardScaler #new
 from joblib import load
+import time
 
 class Process:
     def __init__(self):
@@ -17,7 +18,16 @@ class Process:
         self.raw_buffer = []
         self.counter = 0
         self.i = 0
-#         self.scaler = StandardScaler() #new
+        self.scaler = load('./hardware_ai/cg4002/scaler_final.joblib')
+        self.model = load_model('./hardware_ai/cg4002/detection_final.h5')
+        self.t1 = 0
+        self.t2 = 0
+        self.t3 = 0
+        self.t4 = 0
+        self.t5 = 0
+        self.t6 = 0
+        self.t7 = 0
+        self.t8 = 0
 
     def add_raw_data_to_queue(self, raw_data):
         self.q.put(raw_data)
@@ -39,40 +49,39 @@ class Process:
         return actions[idx]
 
     def process(self, raw):
-#         if raw == "":
-#             self.raw_buffer = []
-#             return
-#         raw_data = self.raw_queue(raw)
-#             self.raw_buffer.append(raw)
-#             return ""
-#         if raw_data == "": return ""
-#         print()
         self.raw_buffer.append(raw)
         if len(self.raw_buffer) < 10:
             return ""
-        
-#         data = [[self.raw_buffer[0][1], self.raw_buffer[0][2], self.raw_buffer[0][3], self.raw_buffer[0][4], self.raw_buffer[0][5], self.raw_buffer[0][6]]]
-#         for i in range(1, len(self.raw_buffer)):
-#             data.append([self.raw_buffer[i][1], self.raw_buffer[i][2], self.raw_buffer[i][3], self.raw_buffer[i][4], self.raw_buffer[i][5], self.raw_buffer[i][6]])
+        self.t1 = time.time()
         data = pd.DataFrame(columns=['acceleration_x', 'acceleration_y', 'acceleration_z', 'gyro_x', 'gyro_y', 'gyro_z'])
         for i in range(len(self.raw_buffer)):
             list_row = [self.raw_buffer[i][1]/100, self.raw_buffer[i][2]/100, self.raw_buffer[i][3]/100, self.raw_buffer[i][4], self.raw_buffer[i][5], self.raw_buffer[i][6]]
-            data.loc[len(data)] = list_row    
-
+            data.loc[len(data)] = list_row
+        self.t2 = time.time()
         self.raw_buffer.clear()
         
                
-        final_data = self.combine_rows(data.values.tolist())        
-        final_data = pd.DataFrame(data=np.array(final_data).T, columns = ["acc_x", "acc_y", "acc_z", "gyr_x", "gyr_y", "gyr_z"])
+        final_data = self.combine_rows(data.values.tolist())
+        self.t3 = time.time()
+        final_data = pd.DataFrame(data=np.array(final_data).T,  columns = ["acc_x", "acc_y", "acc_z", "gyr_x", "gyr_y", "gyr_z"])
+        self.t4 = time.time()
         final_data = self.extract_raw_data_features(final_data)
+        self.t5 = time.time()
         final_data = np.array([self.create_featureslist(final_data)])
-        scaler=load('./hardware_ai/cg4002/scaler.joblib')
-        final_data = scaler.transform(final_data.tolist())
-
-        model = load_model('./hardware_ai/cg4002/detection1.h5')
-#         final_data = np.array([final_data])
-        output = model.predict([final_data]).tolist()[0]
+        self.t6 = time.time()
+        final_data = self.scaler.transform(final_data.tolist())
+        self.t7 = time.time()
+        output = self.model.predict([final_data]).tolist()[0]
         prediction = output.index(max(output))
+        self.t8 = time.time()
+        
+        print(f"feature extraction 1: {self.t2-self.t1}")
+        print(f"feature extraction 2: {self.t3-self.t2}")
+        print(f"feature extraction 3: {self.t4-self.t3}")
+        print(f"feature extraction 4: {self.t5-self.t4}")
+        print(f"feature extraction 5: {self.t6-self.t5}")
+        print(f"feature extraction 6: {self.t7-self.t6}")
+        print(f"feature extraction 6: {self.t8-self.t7}")
         
         if prediction == 0:
             return "reload"
@@ -82,8 +91,8 @@ class Process:
             return "grenade"
         if prediction == 3:
             return "logout"
-        if prediction == 4:
-            return ""
+#         if prediction == 4:
+#             return ""
     
     def raw_queue(self, raw_data):
         if len(self.raw_buffer) < 10:

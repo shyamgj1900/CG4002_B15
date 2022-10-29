@@ -61,7 +61,10 @@ class DetectActionFromAI(threading.Thread):
                     grenade_status = self.check_grenade_stat.receive_message()
                     if grenade_status == "player 2 hit":
                         global player2_hit
+                        print("In player 2 hit")
                         player2_hit = True
+                    elif grenade_status == "player 2 not hit":
+                        print("In player 2 not hit")
                 return action
             elif action == "":
                 return ""
@@ -134,7 +137,7 @@ class BroadcastMessage(threading.Thread):
         global player1_hit, player2_hit
         p1_action = player1_detected_action.get()
         if p1_action == "shoot" or p1_action == "grenade":
-            game_manager.detected_game_state(p1_action, 'none', player1_hit, player2_hit)
+            game_manager.detected_game_state(p1_action, 'none', player2_hit, player1_hit)
         else:
             game_manager.detected_game_state(p1_action, 'none')
         self.comm_eval_server.send_message_to_eval_server()
