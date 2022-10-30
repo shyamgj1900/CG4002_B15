@@ -120,17 +120,7 @@ class PlayerState(PlayerStateBase):
                 self.bullets = self.magazine_size
 
         if action_opponent_is_valid:
-            if action_opponent == 'shield':
-                pass
-            elif action_opponent == 'reload':
-                pass
-            elif action_opponent == 'shoot':
-                self.hp = max(self.hp - self.bullet_hp, 0)
-            elif action_opponent == 'grenade':
-                self.hp = max(self.hp - self.grenade_hp, 0)
-            elif action_opponent == 'none':
-                pass
-            elif self.shield_time != 0:
+            if self.shield_time != 0:
                 if action_opponent == 'shoot':
                     left_dmg = self.shield_health - self.bullet_hp
                     if left_dmg < 0:
@@ -145,6 +135,16 @@ class PlayerState(PlayerStateBase):
                         self.hp = max(self.hp + left_dmg, 0)
                     else:
                         self.shield_health = self.shield_health - self.grenade_hp
+            elif action_opponent == 'shield':
+                pass
+            elif action_opponent == 'reload':
+                pass
+            elif action_opponent == 'shoot':
+                self.hp = max(self.hp - self.bullet_hp, 0)
+            elif action_opponent == 'grenade':
+                self.hp = max(self.hp - self.grenade_hp, 0)
+            elif action_opponent == 'none':
+                pass
 
         if self.hp == 0:
             self.hp = self.max_hp
