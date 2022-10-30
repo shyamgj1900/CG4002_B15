@@ -18,8 +18,8 @@ class Process:
         self.raw_buffer = []
         self.counter = 0
         self.i = 0
-        self.scaler = load('./hardware_ai/cg4002/scaler_final.joblib')
-        self.model = load_model('./hardware_ai/cg4002/detection_final.h5')
+        self.scaler = load('./hardware_ai/cg4002/scaler_final_no_reload.joblib')
+        self.model = load_model('./hardware_ai/cg4002/detection_final_no_reload.h5')
         self.t1 = 0
         self.t2 = 0
         self.t3 = 0
@@ -83,8 +83,8 @@ class Process:
         print(f"feature extraction 6: {self.t7-self.t6}")
         print(f"feature extraction 6: {self.t8-self.t7}")
         
-        if prediction == 0:
-            return "reload"
+        #if prediction == 0:
+         #   return "reload"
         if prediction == 1:
             return "shield"
         if prediction == 2:

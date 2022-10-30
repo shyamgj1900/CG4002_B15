@@ -212,7 +212,7 @@ class BroadcastMessage(threading.Thread):
         p1_action = player1_detected_action.get()
         p2_action = player2_detected_action.get()
         if p1_action == "shoot" or p2_action == "shoot" or p1_action == "grenade" or p2_action == "grenade":
-            game_manager.detected_game_state(p1_action, p2_action, player1_hit, player2_hit)
+            game_manager.detected_game_state(p1_action, p2_action, player2_hit, player1_hit)
         else:
             game_manager.detected_game_state(p1_action, p2_action)
         self.comm_eval_server.send_message_to_eval_server()
