@@ -86,7 +86,7 @@ class DetectActionForP1(threading.Thread):
         while not exit_event.is_set():
             while not player1_action_q.empty():
                 data = player1_action_q.get()
-                # print(f"In run player 1: {action}")
+                print(f"In run player 1: {data}")
                 action = self.get_action_player1(data)
                 if action != "":
                     player1_detected_action.put(action)
@@ -141,7 +141,7 @@ class DetectActionForP2(threading.Thread):
         while not exit_event.is_set():
             while not player2_action_q.empty():
                 data = player2_action_q.get()
-                # print(f"In run player 2: {action}")
+                print(f"In run player 2: {data}")
                 action = self.get_action_player2(data)
                 if action != "":
                     player2_detected_action.put(action)
@@ -156,6 +156,8 @@ class ReceiveMessageP1(threading.Thread):
         # self.socket = self.context.socket(zmq.REP)
         self.socket_p1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.raw_data = ""
+        self.conn = ""
+        self.address = ()
 
     def init_socket_connection(self):
         """
@@ -165,8 +167,8 @@ class ReceiveMessageP1(threading.Thread):
             # print("Establishing connection through port 5550")
             # self.socket.bind("tcp://*:5550")
             self.socket_p1.bind(("127.0.0.1", 5550))
-            self.socket_p1.listen()
-            (conn, address) = self.socket_p1.accept()
+            self.socket_p1.listen(5)
+            (self.conn, self.address) = self.socket_p1.accept()
             print("Accepted a connection request from %s:%s" % (address[0], address[1]))
         except Exception as e:
             print(f"Socket err: {e}")
@@ -177,7 +179,7 @@ class ReceiveMessageP1(threading.Thread):
         the laptop client.
         """
         try:
-            padded_raw_data = self.socket_p1.recv(BUF_SIZE)
+            padded_raw_data = self.conn.recv(BUF_SIZE)
             self.raw_data = unpad(padded_raw_data, AES.block_size)
             self.raw_data = self.raw_data.decode("utf8")
             self.raw_data = json.loads(self.raw_data)
@@ -213,6 +215,8 @@ class ReceiveMessageP2(threading.Thread):
         # self.socket = self.context.socket(zmq.REP)
         self.socket_p2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.raw_data = ""
+        self.conn = ""
+        self.address = ()
 
     def init_socket_connection(self):
         """
@@ -222,8 +226,8 @@ class ReceiveMessageP2(threading.Thread):
             # print("Establishing connection through port 5550")
             # self.socket.bind("tcp://*:5550")
             self.socket_p2.bind(("127.0.0.1", 5551))
-            self.socket_p2.listen()
-            (conn, address) = self.socket_p2.accept()
+            self.socket_p2.listen(5)
+            (self.conn, self.address) = self.socket_p2.accept()
             print("Accepted a connection request from %s:%s" % (address[0], address[1]))
         except Exception as e:
             print(f"Socket err: {e}")
@@ -234,7 +238,7 @@ class ReceiveMessageP2(threading.Thread):
         the laptop client.
         """
         try:
-            padded_raw_data = self.socket_p2.recv(BUF_SIZE)
+            padded_raw_data = self.conn.recv(BUF_SIZE)
             self.raw_data = unpad(padded_raw_data, AES.block_size)
             self.raw_data = self.raw_data.decode("utf8")
             self.raw_data = json.loads(self.raw_data)
