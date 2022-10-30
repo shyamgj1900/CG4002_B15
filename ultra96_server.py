@@ -95,6 +95,7 @@ class DetectActionForP1(threading.Thread):
                 if action != "":
                     player1_detected_action.put(action)
 
+
 class DetectActionForP2(threading.Thread):
     def __init__(self):
         super(DetectActionForP2, self).__init__()
