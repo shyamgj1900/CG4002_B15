@@ -46,15 +46,21 @@ class DetectActionForP1(threading.Thread):
         self.turn_counter_p1 = 0
 
     def get_action_player1(self, data):
-        if data[0] == "G1":
+        if data[1] == 'reload':
+            action = 'reload'
+            self.turn_counter_p1 += 1
+            print(f"Detected action for Player 1: {action}")
+            print(f"Turn count for player 1: {self.turn_counter_p1}")
+            return action
+        if data[0] == 'G1':
             action = "shoot"
             self.turn_counter_p1 += 1
             print(f"Detected action for player 1: {action}")
             print(f"Turn count for player 1: {self.turn_counter_p1}")
             return action
-        elif data[0] == "W1":
+        elif data[0] == 'W1':
             action = self.send_to_ai.process(data)
-            print(f"Player 1 detected action: {action}")
+            # print(f"Player 1 detected action: {action}")
             if action == "logout" and self.turn_counter_p1 > 19:
                 print("Disconnecting BYE.....")
                 exit_event.set()
@@ -73,7 +79,7 @@ class DetectActionForP1(threading.Thread):
                 return action
             elif action == "":
                 return ""
-        elif data[0] == "V1":
+        elif data[0] == 'V1':
             global player1_hit
             player1_hit = True
             return ""
@@ -84,13 +90,10 @@ class DetectActionForP1(threading.Thread):
         while not exit_event.is_set():
             while not player1_action_q.empty():
                 data = player1_action_q.get()
-                # print(f"In run player 1: {action}")
+                # print(f"Player 1 pkt: {data}")
                 action = self.get_action_player1(data)
                 if action != "":
                     player1_detected_action.put(action)
-                    while not player1_action_q.empty():
-                        data = player1_action_q.get()   # clear any residual data packets
-
 
 class DetectActionForP2(threading.Thread):
     def __init__(self):
@@ -101,15 +104,21 @@ class DetectActionForP2(threading.Thread):
         self.turn_counter_p2 = 0
 
     def get_action_player2(self, data):
-        if data[0] == "G2":
+        if data[1] == 'reload':
+            action = "reload"
+            self.turn_counter_p2 += 1
+            print(f"Detected action for Player 2: {action}")
+            print(f"Turn count for player 2: {self.turn_counter_p2}")
+            return action
+        if data[0] == 'G2':
             action = "shoot"
             self.turn_counter_p2 += 1
             print(f"Detected action for Player 2: {action}")
             print(f"Turn count for player 2: {self.turn_counter_p2}")
             return action
-        elif data[0] == "W2":
+        elif data[0] == 'W2':
             action = self.send_to_ai.process(data)
-            print(f"Player 2 detected action: {action}")
+            # print(f"Player 2 detected action: {action}")
             if action == "logout" and self.turn_counter_p2 > 19:
                 print("Disconnecting BYE.....")
                 exit_event.set()
@@ -128,7 +137,7 @@ class DetectActionForP2(threading.Thread):
                 return action
             elif action == "":
                 return ""
-        elif data[0] == "V2":
+        elif data[0] == 'V2':
             global player2_hit
             player2_hit = True
             return ""
@@ -139,12 +148,10 @@ class DetectActionForP2(threading.Thread):
         while not exit_event.is_set():
             while not player2_action_q.empty():
                 data = player2_action_q.get()
-                # print(f"In run player 2: {action}")
+                # print(f"Player 2 pkt: {data}")
                 action = self.get_action_player2(data)
                 if action != "":
                     player2_detected_action.put(action)
-                    while not player2_action_q.empty():
-                        data = player2_action_q.get()    # clear any residual data packets
 
 
 class Ultra96Server(threading.Thread):
@@ -175,14 +182,15 @@ class Ultra96Server(threading.Thread):
             self.raw_data = unpad(padded_raw_data, AES.block_size)
             self.raw_data = self.raw_data.decode("utf8")
             self.raw_data = json.loads(self.raw_data)
+            print(f"Received pkt: {self.raw_data}")
             if self.raw_data[0] == 'G1' or self.raw_data[0] == 'W1' or self.raw_data[0] == 'V1':
-                if self.raw_data[1] == "connected" or self.raw_data[1] == "disconnected":
+                if self.raw_data[1] == 'connected' or self.raw_data[1] == 'disconnected':
                     p1_beetle_id.put(self.raw_data[0])
                     p1_connection_status.put(self.raw_data[1])
                 else:
                     player1_action_q.put(self.raw_data)
             elif self.raw_data[0] == 'G2' or self.raw_data[0] == 'W2' or self.raw_data[0] == 'V2':
-                if self.raw_data[1] == "connected" or self.raw_data[1] == "disconnected":
+                if self.raw_data[1] == 'connected' or self.raw_data[1] == 'disconnected':
                     p2_beetle_id.put(self.raw_data[0])
                     p2_connection_status.put(self.raw_data[1])
                 else:
