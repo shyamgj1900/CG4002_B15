@@ -1,6 +1,5 @@
 import sys
 import threading
-import socket
 import zmq
 import json
 from Crypto.Cipher import AES
@@ -36,7 +35,6 @@ packet_index = 0
 
 PORT_OUT = 0
 IP_SERVER = ""
-BUF_SIZE = 1024
 
 
 class DetectActionForP1(threading.Thread):
@@ -56,7 +54,7 @@ class DetectActionForP1(threading.Thread):
             return action
         elif data[0] == "W1":
             action = self.send_to_ai.process(data)
-            # print(f"Player 1 detected action: {action}")
+            print(f"Player 1 detected action: {action}")
             if action == "logout" and self.turn_counter_p1 > 19:
                 print("Disconnecting BYE.....")
                 exit_event.set()
@@ -86,12 +84,12 @@ class DetectActionForP1(threading.Thread):
         while not exit_event.is_set():
             while not player1_action_q.empty():
                 data = player1_action_q.get()
-                print(f"In run player 1: {data}")
+                # print(f"In run player 1: {action}")
                 action = self.get_action_player1(data)
                 if action != "":
                     player1_detected_action.put(action)
-                    # while not player1_action_q.empty():
-                    #     data = player1_action_q.get()   # clear any residual data packets
+                    while not player1_action_q.empty():
+                        data = player1_action_q.get()   # clear any residual data packets
 
 
 class DetectActionForP2(threading.Thread):
@@ -111,7 +109,7 @@ class DetectActionForP2(threading.Thread):
             return action
         elif data[0] == "W2":
             action = self.send_to_ai.process(data)
-            # print(f"Player 2 detected action: {action}")
+            print(f"Player 2 detected action: {action}")
             if action == "logout" and self.turn_counter_p2 > 19:
                 print("Disconnecting BYE.....")
                 exit_event.set()
@@ -141,35 +139,28 @@ class DetectActionForP2(threading.Thread):
         while not exit_event.is_set():
             while not player2_action_q.empty():
                 data = player2_action_q.get()
-                print(f"In run player 2: {data}")
+                # print(f"In run player 2: {action}")
                 action = self.get_action_player2(data)
                 if action != "":
                     player2_detected_action.put(action)
-                    # while not player2_action_q.empty():
-                    #     data = player2_action_q.get()    # clear any residual data packets
+                    while not player2_action_q.empty():
+                        data = player2_action_q.get()    # clear any residual data packets
 
 
-class ReceiveMessageP1(threading.Thread):
+class Ultra96Server(threading.Thread):
     def __init__(self):
-        super(ReceiveMessageP1, self).__init__()
-        # self.context = zmq.Context()
-        # self.socket = self.context.socket(zmq.REP)
-        self.socket_p1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        super(Ultra96Server, self).__init__()
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.REP)
         self.raw_data = ""
-        self.conn = ""
-        self.address = ()
 
     def init_socket_connection(self):
         """
         This function initialises the socket connection.
         """
         try:
-            # print("Establishing connection through port 5550")
-            # self.socket.bind("tcp://*:5550")
-            self.socket_p1.bind(("127.0.0.1", 5550))
-            self.socket_p1.listen(5)
-            (self.conn, self.address) = self.socket_p1.accept()
-            print("Accepted a connection request from %s:%s" % (address[0], address[1]))
+            print("Establishing connection through port 5550")
+            self.socket.bind("tcp://*:5550")
         except Exception as e:
             print(f"Socket err: {e}")
 
@@ -178,8 +169,9 @@ class ReceiveMessageP1(threading.Thread):
         This function receives a message from the laptop client through message queues and sends an ACK message back to
         the laptop client.
         """
+        global player1_action_q, player2_action_q, start_time_packet, start_time_action_detect, packet_index
         try:
-            padded_raw_data = self.conn.recv(BUF_SIZE)
+            padded_raw_data = self.socket.recv()
             self.raw_data = unpad(padded_raw_data, AES.block_size)
             self.raw_data = self.raw_data.decode("utf8")
             self.raw_data = json.loads(self.raw_data)
@@ -189,66 +181,13 @@ class ReceiveMessageP1(threading.Thread):
                     p1_connection_status.put(self.raw_data[1])
                 else:
                     player1_action_q.put(self.raw_data)
-            # elif self.raw_data[0] == 'G2' or self.raw_data[0] == 'W2' or self.raw_data[0] == 'V2':
-            #     if self.raw_data[1] == "connected" or self.raw_data[1] == "disconnected":
-            #         p2_beetle_id.put(self.raw_data[0])
-            #         p2_connection_status.put(self.raw_data[1])
-            #     else:
-            #         player2_action_q.put(self.raw_data)
-            # self.socket_p1.send(b"ACK")
-        except Exception as e:
-            print(f"Error receiving message: {e}")
-
-    def run(self):
-        """
-        This is the main thread for the Ultra96 server.
-        """
-        self.init_socket_connection()
-        while not exit_event.is_set():
-            self.receive_message_from_laptop()
-
-
-class ReceiveMessageP2(threading.Thread):
-    def __init__(self):
-        super(ReceiveMessageP2, self).__init__()
-        # self.context = zmq.Context()
-        # self.socket = self.context.socket(zmq.REP)
-        self.socket_p2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.raw_data = ""
-        self.conn = ""
-        self.address = ()
-
-    def init_socket_connection(self):
-        """
-        This function initialises the socket connection.
-        """
-        try:
-            # print("Establishing connection through port 5550")
-            # self.socket.bind("tcp://*:5550")
-            self.socket_p2.bind(("127.0.0.1", 5551))
-            self.socket_p2.listen(5)
-            (self.conn, self.address) = self.socket_p2.accept()
-            print("Accepted a connection request from %s:%s" % (address[0], address[1]))
-        except Exception as e:
-            print(f"Socket err: {e}")
-
-    def receive_message_from_laptop(self):
-        """
-        This function receives a message from the laptop client through message queues and sends an ACK message back to
-        the laptop client.
-        """
-        try:
-            padded_raw_data = self.conn.recv(BUF_SIZE)
-            self.raw_data = unpad(padded_raw_data, AES.block_size)
-            self.raw_data = self.raw_data.decode("utf8")
-            self.raw_data = json.loads(self.raw_data)
-            if self.raw_data[0] == 'G2' or self.raw_data[0] == 'W2' or self.raw_data[0] == 'V2':
+            elif self.raw_data[0] == 'G2' or self.raw_data[0] == 'W2' or self.raw_data[0] == 'V2':
                 if self.raw_data[1] == "connected" or self.raw_data[1] == "disconnected":
                     p2_beetle_id.put(self.raw_data[0])
                     p2_connection_status.put(self.raw_data[1])
                 else:
                     player2_action_q.put(self.raw_data)
-            # self.socket.send(b"ACK")
+            self.socket.send(b"ACK")
         except Exception as e:
             print(f"Error receiving message: {e}")
 
@@ -328,13 +267,11 @@ def main():
     IP_SERVER = sys.argv[1]
     PORT_OUT = sys.argv[2]
     PORT_OUT = int(PORT_OUT)
-    recv_msg_p1 = ReceiveMessageP1()
-    recv_msg_p2 = ReceiveMessageP2()
+    u96_server = Ultra96Server()
     detect_action_for_p1 = DetectActionForP1()
     detect_action_for_p2 = DetectActionForP2()
     broadcast_message = BroadcastMessage()
-    recv_msg_p1.start()
-    recv_msg_p2.start()
+    u96_server.start()
     detect_action_for_p1.start()
     detect_action_for_p2.start()
     broadcast_message.start()
