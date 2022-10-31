@@ -180,6 +180,7 @@ class Ultra96Server(threading.Thread):
         global player1_action_q, player2_action_q, start_time_packet, start_time_action_detect, packet_index
         try:
             padded_raw_data = self.socket.recv()
+            self.socket.send(b"ACK")
             self.raw_data = unpad(padded_raw_data, AES.block_size)
             self.raw_data = self.raw_data.decode("utf8")
             self.raw_data = json.loads(self.raw_data)
@@ -196,7 +197,6 @@ class Ultra96Server(threading.Thread):
                     p2_connection_status.put(self.raw_data[1])
                 else:
                     player2_action_q.put(self.raw_data)
-            self.socket.send(b"ACK")
         except Exception as e:
             print(f"Error receiving message: {e}")
 
