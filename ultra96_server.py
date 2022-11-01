@@ -87,6 +87,8 @@ class DetectActionForP1(threading.Thread):
                 action = self.get_action_player1(data)
                 if action != "":
                     player1_detected_action = action
+                    while not player1_action_q.empty():
+                        player1_action_q.get()
 
 
 class DetectActionForP2(threading.Thread):
@@ -142,7 +144,8 @@ class DetectActionForP2(threading.Thread):
                 action = self.get_action_player2(data)
                 if action != "":
                     player2_detected_action = action
-
+                    while not player2_action_q.empty():
+                        player2_action_q.get()
 
 class Ultra96Server(threading.Thread):
     def __init__(self):
