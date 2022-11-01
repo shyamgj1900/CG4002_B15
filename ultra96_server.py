@@ -14,24 +14,21 @@ from external_comms.eval_client import EvalClient
 from external_comms.visualizer_broadcast import VisualizerBroadcast
 
 game_manager = GameState()
+send_to_ai_p1 = None
+send_to_ai_p2 = None
 player1_action_q = Queue()
 player2_action_q = Queue()
 player1_hit = False
 player2_hit = False
-player1_detected_action = Queue()
-player2_detected_action = Queue()
+player1_detected_action = ""
+player2_detected_action = ""
 p1_beetle_id = Queue()
 p2_beetle_id = Queue()
 p1_connection_status = Queue()
 p2_connection_status = Queue()
-eval_message_event = threading.Event()
-visualizer_message_event = threading.Event()
-detect_action_event = threading.Event()
+q = Queue()
 exit_event = threading.Event()
-start_time_packet = 0
-start_time_action_detect = 0
-end_time_action_detect = 0
-packet_index = 0
+turn_counter = 1
 
 PORT_OUT = 0
 IP_SERVER = ""
@@ -43,31 +40,27 @@ class DetectActionForP1(threading.Thread):
         self.send_to_ai = Process()
         self.check_grenade_stat = VisualizerBroadcast()
         # self.send_to_ai = TestAI()
-        self.turn_counter_p1 = 0
 
     def get_action_player1(self, data):
         if data[1] == 'reload':
             action = 'reload'
-            self.turn_counter_p1 += 1
             print(f"Detected action for Player 1: {action}")
-            print(f"Turn count for player 1: {self.turn_counter_p1}")
+            print(f"Turn count for player 1: {turn_counter}")
             return action
         if data[0] == 'G1':
             action = "shoot"
-            self.turn_counter_p1 += 1
             print(f"Detected action for player 1: {action}")
-            print(f"Turn count for player 1: {self.turn_counter_p1}")
+            print(f"Turn count for player 1: {turn_counter}")
             return action
         elif data[0] == 'W1':
             action = self.send_to_ai.process(data)
             # print(f"Player 1 detected action: {action}")
-            if action == "logout" and self.turn_counter_p1 > 19:
+            if action == "logout" and turn_counter > 19:
                 print("Disconnecting BYE.....")
                 exit_event.set()
             if action != "":
-                self.turn_counter_p1 += 1
                 print(f"Detected action for player 1: {action}")
-                print(f"Turn count for player 1: {self.turn_counter_p1}")
+                print(f"Turn count for player 1: {turn_counter}")
                 if action == "grenade":
                     msg = "p1 " + action
                     self.check_grenade_stat.publish_message(msg)
@@ -93,7 +86,7 @@ class DetectActionForP1(threading.Thread):
                 # print(f"Player 1 pkt: {data}")
                 action = self.get_action_player1(data)
                 if action != "":
-                    player1_detected_action.put(action)
+                    player1_detected_action = action
 
 
 class DetectActionForP2(threading.Thread):
@@ -102,31 +95,27 @@ class DetectActionForP2(threading.Thread):
         self.send_to_ai = Process()
         self.check_grenade_stat = VisualizerBroadcast()
         # self.send_to_ai = TestAI()
-        self.turn_counter_p2 = 0
 
     def get_action_player2(self, data):
         if data[1] == 'reload':
             action = "reload"
-            self.turn_counter_p2 += 1
             print(f"Detected action for Player 2: {action}")
-            print(f"Turn count for player 2: {self.turn_counter_p2}")
+            print(f"Turn count for player 2: {turn_counter}")
             return action
         if data[0] == 'G2':
             action = "shoot"
-            self.turn_counter_p2 += 1
             print(f"Detected action for Player 2: {action}")
-            print(f"Turn count for player 2: {self.turn_counter_p2}")
+            print(f"Turn count for player 2: {turn_counter}")
             return action
         elif data[0] == 'W2':
             action = self.send_to_ai.process(data)
             # print(f"Player 2 detected action: {action}")
-            if action == "logout" and self.turn_counter_p2 > 19:
+            if action == "logout" and turn_counter > 19:
                 print("Disconnecting BYE.....")
                 exit_event.set()
             if action != "":
-                self.turn_counter_p2 += 1
                 print(f"Detected action for Player 2: {action}")
-                print(f"Turn count for player 2: {self.turn_counter_p2}")
+                print(f"Turn count for player 2: {turn_counter}")
                 if action == "grenade":
                     msg = "p2 " + action
                     self.check_grenade_stat.publish_message(msg)
@@ -152,7 +141,7 @@ class DetectActionForP2(threading.Thread):
                 # print(f"Player 2 pkt: {data}")
                 action = self.get_action_player2(data)
                 if action != "":
-                    player2_detected_action.put(action)
+                    player2_detected_action = action
 
 
 class Ultra96Server(threading.Thread):
@@ -177,7 +166,7 @@ class Ultra96Server(threading.Thread):
         This function receives a message from the laptop client through message queues and sends an ACK message back to
         the laptop client.
         """
-        global player1_action_q, player2_action_q, start_time_packet, start_time_action_detect, packet_index
+        global player1_action_q, player2_action_q
         try:
             padded_raw_data = self.socket.recv()
             self.socket.send(b"ACK")
@@ -216,18 +205,20 @@ class BroadcastMessage(threading.Thread):
         self.comm_visualizer = CommWithVisualizer()
 
     def send_message(self):
-        # if player1_detected_action != "" and player2_detected_action != "":
-        global player1_hit, player2_hit
-        p1_action = player1_detected_action.get()
-        p2_action = player2_detected_action.get()
+        global player1_hit, player2_hit, player1_detected_action, player2_detected_action, turn_counter
+        p1_action = player1_detected_action
+        p2_action = player2_detected_action
         if p1_action == "shoot" or p2_action == "shoot" or p1_action == "grenade" or p2_action == "grenade":
             game_manager.detected_game_state(p1_action, p2_action, player2_hit, player1_hit)
         else:
             game_manager.detected_game_state(p1_action, p2_action)
         self.comm_eval_server.send_message_to_eval_server()
         self.comm_visualizer.send_message_to_visualizer()
+        player1_detected_action = ""
+        player2_detected_action = ""
         player1_hit = False
         player2_hit = False
+        turn_counter += 1
 
     def send_connection_status_p1(self):
         p1_beetle = p1_beetle_id.get()
@@ -241,7 +232,7 @@ class BroadcastMessage(threading.Thread):
 
     def run(self):
         while not exit_event.is_set():
-            if player1_detected_action.qsize() != 0 and player2_detected_action.qsize() != 0:
+            if player1_detected_action != "" and player2_detected_action != "":
                 self.send_message()
             if p1_beetle_id.qsize() != 0:
                 self.send_connection_status_p1()
@@ -272,10 +263,12 @@ class CommWithVisualizer:
 
 
 def main():
-    global PORT_OUT, IP_SERVER
+    global PORT_OUT, IP_SERVER, send_to_ai_p1, send_to_ai_p2
     IP_SERVER = sys.argv[1]
     PORT_OUT = sys.argv[2]
     PORT_OUT = int(PORT_OUT)
+    send_to_ai_p1 = Process()
+    send_to_ai_p2 = Process()
     u96_server = Ultra96Server()
     detect_action_for_p1 = DetectActionForP1()
     detect_action_for_p2 = DetectActionForP2()
