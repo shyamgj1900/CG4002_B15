@@ -16,7 +16,7 @@ class VisualizerBroadcast(threading.Thread):
         # self.username = "cg4002_b15"
         # self.password = "CG4002_B15"
         self.topic_viz_recv = "Ultra96/visualizer/receive"
-        self.topic_viz_send = "Ultra96/visualizer/send"
+        self.topic_viz_send = "Ultra96/visualizer/send2"
         self.init_message_queue_connection()
 
     def init_message_queue_connection(self):
@@ -60,7 +60,7 @@ class VisualizerReceive:
         # self.username = "cg4002_b15"
         # self.password = "CG4002_B15"
         self.topic_viz_recv = "Ultra96/visualizer/receive2"
-        self.topic_viz_send = "Ultra96/visualizer/send2"
+        self.topic_viz_send = "Ultra96/visualizer/send"
         self.init_message_queue_connection()
 
     def init_message_queue_connection(self):
