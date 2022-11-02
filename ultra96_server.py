@@ -67,7 +67,7 @@ class DetectActionForP1(threading.Thread):
                 if action == "grenade":
                     msg = "p1 " + action
                     visualizer_publish.publish_message(msg)
-                    time.sleep(1)
+                    # time.sleep(1)
                     grenade_status = visualizer_receive.receive_message()
                     print(f"Grenade stat: {grenade_status}")
                     if grenade_status == "player 2 hit":
@@ -125,7 +125,7 @@ class DetectActionForP2(threading.Thread):
                 if action == "grenade":
                     msg = "p2 " + action
                     visualizer_publish.publish_message(msg)
-                    time.sleep(1)
+                    # time.sleep(1)
                     grenade_status = visualizer_receive.receive_message()
                     print(f"Grenade stat: {grenade_status}")
                     if grenade_status == "player 1 hit":
