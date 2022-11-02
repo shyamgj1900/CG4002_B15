@@ -4,7 +4,7 @@ import threading
 from queue import Queue
 
 q = Queue()
-
+set = False
 
 class VisualizerBroadcast(threading.Thread):
     def __init__(self):
@@ -34,7 +34,9 @@ class VisualizerBroadcast(threading.Thread):
 
     @staticmethod
     def on_message(client, userdata, msg):
-        q.put(msg)
+        print(f"In on message: {msg.payload}")
+        message = msg.payload.decode("utf-8")
+        q.put(message)
 
     @staticmethod
     def receive_message():
@@ -42,8 +44,8 @@ class VisualizerBroadcast(threading.Thread):
             message = q.get()
             if message is None:
                 continue
-            print("Received from visualizer", str(message.payload.decode("utf-8")))
-            return str(message.payload.decode("utf-8"))
+            print(f"Received from visualizer: {message}") 
+            return message
 
     def publish_message(self, message):
         self.publisher.publish(self.topic_viz_recv, message)
