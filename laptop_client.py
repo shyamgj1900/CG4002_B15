@@ -17,7 +17,7 @@ class LaptopClient(threading.Thread):
         super(LaptopClient, self).__init__()
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REQ)
-        self.stu_ssh_addr = "stu.comp.nus.edu.sg"
+        self.stu_ssh_addr = "sunfire.comp.nus.edu.sg"
         self.stu_ssh_username = "shyam"
         self.stu_ssh_password = ""
         self.ultra96_ssh_addr = "192.168.95.247"
@@ -107,6 +107,7 @@ class LaptopClient(threading.Thread):
         #                       ['W1', -29.74, 151.72, 118.56, 2387.0, 3798.0, -11181.0],
         #                       ['W1', -18.03, 168.7, 135.62, -869.0, 6254.0, -9281.0]]]
         for new_actions in multi_new_actions:
+            var = input("Enter any key...")
             for i, new_action in enumerate(new_actions):
                 new_action = json.dumps(new_action)
                 new_action_encode = new_action.encode("utf8")
@@ -117,7 +118,6 @@ class LaptopClient(threading.Thread):
                 message = message.decode("utf8")
                 print(message)
                 time.sleep(0.1)
-            var = input("Enter any key...")
 
     def run(self):
         """

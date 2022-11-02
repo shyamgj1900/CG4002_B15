@@ -12,9 +12,11 @@ from hardware_ai.pynq_overlay import Process
 from external_comms.game_state import GameState
 from external_comms.eval_client import EvalClient
 from external_comms.visualizer_broadcast import VisualizerBroadcast
+from external_comms.visualizer_broadcast import VisualizerReceive
 
 game_manager = GameState()
 visualizer_publish = VisualizerBroadcast()
+visualizer_receive = VisualizerReceive()
 send_to_ai_p1 = None
 send_to_ai_p2 = None
 player1_action_q = Queue()
@@ -66,7 +68,7 @@ class DetectActionForP1(threading.Thread):
                     msg = "p1 " + action
                     visualizer_publish.publish_message(msg)
                     time.sleep(1)
-                    grenade_status = visualizer_publish.receive_message()
+                    grenade_status = visualizer_receive.receive_message()
                     print(f"Grenade stat: {grenade_status}")
                     if grenade_status == "player 2 hit":
                         global player2_hit
@@ -124,7 +126,7 @@ class DetectActionForP2(threading.Thread):
                     msg = "p2 " + action
                     visualizer_publish.publish_message(msg)
                     time.sleep(1)
-                    grenade_status = visualizer_publish.receive_message()
+                    grenade_status = visualizer_receive.receive_message()
                     print(f"Grenade stat: {grenade_status}")
                     if grenade_status == "player 1 hit":
                         global player1_hit
