@@ -14,6 +14,7 @@ from external_comms.eval_client import EvalClient
 from external_comms.visualizer_broadcast import VisualizerBroadcast
 
 game_manager = GameState()
+visualizer_publish = VisualizerBroadcast()
 send_to_ai_p1 = None
 send_to_ai_p2 = None
 player1_action_q = Queue()
@@ -38,7 +39,7 @@ class DetectActionForP1(threading.Thread):
     def __init__(self):
         super(DetectActionForP1, self).__init__()
         self.send_to_ai = Process()
-        self.check_grenade_stat = VisualizerBroadcast()
+        # self.check_grenade_stat = VisualizerBroadcast()
         # self.send_to_ai = TestAI()
 
     def get_action_player1(self, data):
@@ -63,9 +64,9 @@ class DetectActionForP1(threading.Thread):
                 print(f"Turn count for player 1: {turn_counter}")
                 if action == "grenade":
                     msg = "p1 " + action
-                    self.check_grenade_stat.publish_message(msg)
+                    visualizer_publish.publish_message(msg)
                     time.sleep(1)
-                    grenade_status = self.check_grenade_stat.receive_message()
+                    grenade_status = visualizer_publish.receive_message()
                     print(f"Grenade stat: {grenade_status}")
                     if grenade_status == "player 2 hit":
                         global player2_hit
@@ -96,7 +97,7 @@ class DetectActionForP2(threading.Thread):
     def __init__(self):
         super(DetectActionForP2, self).__init__()
         self.send_to_ai = Process()
-        self.check_grenade_stat = VisualizerBroadcast()
+        # self.check_grenade_stat = VisualizerBroadcast()
         # self.send_to_ai = TestAI()
 
     def get_action_player2(self, data):
@@ -121,9 +122,9 @@ class DetectActionForP2(threading.Thread):
                 print(f"Turn count for player 2: {turn_counter}")
                 if action == "grenade":
                     msg = "p2 " + action
-                    self.check_grenade_stat.publish_message(msg)
+                    visualizer_publish.publish_message(msg)
                     time.sleep(1)
-                    grenade_status = self.check_grenade_stat.receive_message()
+                    grenade_status = visualizer_publish.receive_message()
                     print(f"Grenade stat: {grenade_status}")
                     if grenade_status == "player 1 hit":
                         global player1_hit
@@ -148,6 +149,7 @@ class DetectActionForP2(threading.Thread):
                     player2_detected_action = action
                     while not player2_action_q.empty():
                         player2_action_q.get()
+
 
 class Ultra96Server(threading.Thread):
     def __init__(self):
@@ -257,14 +259,15 @@ class CommWithEvalServer:
 
 
 class CommWithVisualizer:
-    def __init__(self):
-        self.visualizer_publish = VisualizerBroadcast()
+    # def __init__(self):
+        # self.visualizer_publish = VisualizerBroadcast()
 
-    def send_message_to_visualizer(self, beetle_id="", status=""):
+    @staticmethod
+    def send_message_to_visualizer(beetle_id="", status=""):
         if beetle_id != "" and status != "":
-            self.visualizer_publish.publish_message(f"{beetle_id} is {status}")
+            visualizer_publish.publish_message(f"{beetle_id} is {status}")
         else:
-            self.visualizer_publish.publish_message(json.dumps(game_manager.get_dict()))
+            visualizer_publish.publish_message(json.dumps(game_manager.get_dict()))
 
 
 def main():
