@@ -66,6 +66,7 @@ class DetectActionForP1(threading.Thread):
                     self.check_grenade_stat.publish_message(msg)
                     time.sleep(1)
                     grenade_status = self.check_grenade_stat.receive_message()
+                    print(f"Grenade stat: {grenade_status}")
                     if grenade_status == "player 2 hit":
                         global player2_hit
                         player2_hit = True
@@ -123,6 +124,7 @@ class DetectActionForP2(threading.Thread):
                     self.check_grenade_stat.publish_message(msg)
                     time.sleep(1)
                     grenade_status = self.check_grenade_stat.receive_message()
+                    print(f"Grenade stat: {grenade_status}")
                     if grenade_status == "player 1 hit":
                         global player1_hit
                         player1_hit = True
