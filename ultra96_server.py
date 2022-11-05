@@ -31,7 +31,7 @@ p1_connection_status = Queue()
 p2_connection_status = Queue()
 q = Queue()
 exit_event = threading.Event()
-turn_counter = 1
+turn_counter = 0
 
 PORT_OUT = 0
 IP_SERVER = ""
@@ -215,6 +215,11 @@ class BroadcastMessage(threading.Thread):
 
     def send_message(self):
         global player1_hit, player2_hit, player1_detected_action, player2_detected_action, turn_counter
+        if turn_counter == 0:
+            turn_counter += 1
+            player1_detected_action = ""
+            player2_detected_action = ""
+            return
         p1_action = player1_detected_action
         p2_action = player2_detected_action
         if p1_action == "shoot" or p2_action == "shoot" or p1_action == "grenade" or p2_action == "grenade":
@@ -261,15 +266,15 @@ class CommWithEvalServer:
 
 
 class CommWithVisualizer:
-    # def __init__(self):
-        # self.visualizer_publish = VisualizerBroadcast()
+    def __init__(self):
+        self.visualizer_publish = VisualizerBroadcast()
 
-    @staticmethod
-    def send_message_to_visualizer(beetle_id="", status=""):
+    # @staticmethod
+    def send_message_to_visualizer(self, beetle_id="", status=""):
         if beetle_id != "" and status != "":
-            visualizer_publish.publish_message(f"{beetle_id} is {status}")
+            self.visualizer_publish.publish_message(f"{beetle_id} is {status}")
         else:
-            visualizer_publish.publish_message(json.dumps(game_manager.get_dict()))
+            self.visualizer_publish.publish_message(json.dumps(game_manager.get_dict()))
 
 
 def main():
