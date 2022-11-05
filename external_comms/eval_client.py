@@ -7,10 +7,7 @@ from Crypto.Util.Padding import pad
 from Crypto.Cipher import AES
 
 HEADER = 64
-# PORT_OUT = 5050
-# IP_SERVER = socket.gethostbyname(socket.gethostname())
 FORMAT = 'utf-8'
-# ADDR_OUT = (IP_SERVER, PORT_OUT)
 
 
 class EvalClient:
