@@ -109,7 +109,7 @@ class LaptopClient(threading.Thread):
                 message = self.socket.recv()
                 message = message.decode("utf8")
                 print(message)
-                time.sleep(0.1)
+                # time.sleep(0.1)
 
     def run(self):
         """

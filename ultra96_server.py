@@ -5,10 +5,8 @@ import json
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 from queue import Queue
-import time
 
 from hardware_ai.pynq_overlay import Process
-# from external_comms.test_ai import TestAI
 from external_comms.game_state import GameState
 from external_comms.eval_client import EvalClient
 from external_comms.visualizer_broadcast import VisualizerBroadcast
@@ -41,10 +39,11 @@ class DetectActionForP1(threading.Thread):
     def __init__(self):
         super(DetectActionForP1, self).__init__()
         self.send_to_ai = Process()
-        # self.check_grenade_stat = VisualizerBroadcast()
-        # self.send_to_ai = TestAI()
 
     def get_action_player1(self, data):
+        """
+        This method passes the data packets received from the relay node for player 1 and gets the detected action.
+        """
         if data[1] == 'reload':
             action = 'reload'
             print(f"Detected action for Player 1: {action}")
@@ -57,7 +56,6 @@ class DetectActionForP1(threading.Thread):
             return action
         elif data[0] == 'W1':
             action = self.send_to_ai.process(data)
-            # print(f"Player 1 detected action: {action}")
             if action == "logout" and turn_counter > 19:
                 print("Disconnecting BYE.....")
                 exit_event.set()
@@ -67,7 +65,6 @@ class DetectActionForP1(threading.Thread):
                 if action == "grenade":
                     msg = "p1 " + action
                     visualizer_publish.publish_message(msg)
-                    # time.sleep(1)
                     grenade_status = visualizer_receive.receive_message()
                     print(f"Grenade stat: {grenade_status}")
                     if grenade_status == "player 2 hit":
@@ -87,7 +84,6 @@ class DetectActionForP1(threading.Thread):
         while not exit_event.is_set():
             while not player1_action_q.empty():
                 data = player1_action_q.get()
-                # print(f"Player 1 pkt: {data}")
                 action = self.get_action_player1(data)
                 if action != "":
                     player1_detected_action = action
@@ -99,10 +95,11 @@ class DetectActionForP2(threading.Thread):
     def __init__(self):
         super(DetectActionForP2, self).__init__()
         self.send_to_ai = Process()
-        # self.check_grenade_stat = VisualizerBroadcast()
-        # self.send_to_ai = TestAI()
 
     def get_action_player2(self, data):
+        """
+        This method passes the data packets received from the relay node for player 2 and gets the detected action.
+        """
         if data[1] == 'reload':
             action = "reload"
             print(f"Detected action for Player 2: {action}")
@@ -115,7 +112,6 @@ class DetectActionForP2(threading.Thread):
             return action
         elif data[0] == 'W2':
             action = self.send_to_ai.process(data)
-            # print(f"Player 2 detected action: {action}")
             if action == "logout" and turn_counter > 19:
                 print("Disconnecting BYE.....")
                 exit_event.set()
@@ -125,7 +121,6 @@ class DetectActionForP2(threading.Thread):
                 if action == "grenade":
                     msg = "p2 " + action
                     visualizer_publish.publish_message(msg)
-                    # time.sleep(1)
                     grenade_status = visualizer_receive.receive_message()
                     print(f"Grenade stat: {grenade_status}")
                     if grenade_status == "player 1 hit":
@@ -145,7 +140,6 @@ class DetectActionForP2(threading.Thread):
         while not exit_event.is_set():
             while not player2_action_q.empty():
                 data = player2_action_q.get()
-                # print(f"Player 2 pkt: {data}")
                 action = self.get_action_player2(data)
                 if action != "":
                     player2_detected_action = action
@@ -214,6 +208,9 @@ class BroadcastMessage(threading.Thread):
         self.comm_visualizer = CommWithVisualizer()
 
     def send_message(self):
+        """
+        This method helps to send the JSON message when the player actions for both players are detected
+        """
         global player1_hit, player2_hit, player1_detected_action, player2_detected_action, turn_counter
         if turn_counter == 0:
             turn_counter += 1
@@ -235,11 +232,17 @@ class BroadcastMessage(threading.Thread):
         turn_counter += 1
 
     def send_connection_status_p1(self):
+        """
+        This method sends the connection status regarding p1 wearables to the visualizer
+        """
         p1_beetle = p1_beetle_id.get()
         p1_conn = p1_connection_status.get()
         self.comm_visualizer.send_message_to_visualizer(p1_beetle, p1_conn)
 
     def send_connection_status_p2(self):
+        """
+        This method sends the connection status regarding p2 wearables to the visualizer
+        """
         p2_beetle = p2_beetle_id.get()
         p2_conn = p2_connection_status.get()
         self.comm_visualizer.send_message_to_visualizer(p2_beetle, p2_conn)
@@ -260,6 +263,9 @@ class CommWithEvalServer:
         self.updated_state = {}
 
     def send_message_to_eval_server(self):
+        """
+        This sends the JSON message to the eval server and receives the updated JSON message back from the eval server.
+        """
         global game_manager
         self.updated_state = self.eval_client.handle_eval_server(game_manager.get_dict())
         game_manager.update_game_state(self.updated_state)
@@ -269,8 +275,11 @@ class CommWithVisualizer:
     def __init__(self):
         self.visualizer_publish = VisualizerBroadcast()
 
-    # @staticmethod
     def send_message_to_visualizer(self, beetle_id="", status=""):
+        """
+        This method sends the connection status regarding the wearables for either players or sends the JSON message
+        of the game state.
+        """
         if beetle_id != "" and status != "":
             self.visualizer_publish.publish_message(f"{beetle_id} is {status}")
         else:
