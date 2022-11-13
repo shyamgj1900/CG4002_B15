@@ -1,88 +1,50 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
 import random
 from queue import Queue
 import pandas as pd
 import numpy as np
 from scipy import stats, signal 
-from tensorflow.keras.models import load_model
-# from sklearn.preprocessing import StandardScaler #new
-from joblib import load
+from tensorflow.keras.models import load_model #import model
+from joblib import load #import standard scalar weights
 import time
 
 class Process:
     def __init__(self):
-        self.q = Queue()
         self.raw_buffer = []
-        self.counter = 0
         self.i = 0
         self.scaler = load('./hardware_ai/cg4002/scaler_final.joblib')
         self.model = load_model('./hardware_ai/cg4002/detection_final.h5')
-        self.t1 = 0
-        self.t2 = 0
-        self.t3 = 0
-        self.t4 = 0
-        self.t5 = 0
-        self.t6 = 0
-        self.t7 = 0
-        self.t8 = 0
-
-    def add_raw_data_to_queue(self, raw_data):
-        self.q.put(raw_data)
-
-    def check_time(self):
-        self.counter += 1
-        if self.counter < 25:
-            return False
-        self.counter = 0
-        return True
-    
-    def detect_action(self):
-        while not self.q.empty():
-            message = self.q.get()
-            print(f"Raw msg: {message}")
-        actions = ["shoot", "reload", "grenade", "shield"]
-        idx = self.i % 4
-        self.i += 1
-        return actions[idx]
 
     def process(self, raw):
         self.raw_buffer.append(raw)
+        
+        #buffer fills until 10 packet
         if len(self.raw_buffer) < 10:
             return ""
-        self.t1 = time.time()
+        
+        #convert raw data into a dataframe for manipulation
         data = pd.DataFrame(columns=['acceleration_x', 'acceleration_y', 'acceleration_z', 'gyro_x', 'gyro_y', 'gyro_z'])
         for i in range(len(self.raw_buffer)):
             list_row = [self.raw_buffer[i][1]/100, self.raw_buffer[i][2]/100, self.raw_buffer[i][3]/100, self.raw_buffer[i][4], self.raw_buffer[i][5], self.raw_buffer[i][6]]
             data.loc[len(data)] = list_row
-        self.t2 = time.time()
         self.raw_buffer.clear()
-        
-               
+              
+        #feature extraction
         final_data = self.combine_rows(data.values.tolist())
-        self.t3 = time.time()
         final_data = pd.DataFrame(data=np.array(final_data).T,  columns = ["acc_x", "acc_y", "acc_z", "gyr_x", "gyr_y", "gyr_z"])
-        self.t4 = time.time()
         final_data = self.extract_raw_data_features(final_data)
-        self.t5 = time.time()
         final_data = np.array([self.create_featureslist(final_data)])
-        self.t6 = time.time()
+        
+        #scales the raw data with model scalars
         final_data = self.scaler.transform(final_data.tolist())
-        self.t7 = time.time()
+        
+        #predicts action
         output = self.model.predict([final_data]).tolist()[0]
         prediction = output.index(max(output))
-        self.t8 = time.time()
-        
-        print(f"feature extraction 1: {self.t2-self.t1}")
-        print(f"feature extraction 2: {self.t3-self.t2}")
-        print(f"feature extraction 3: {self.t4-self.t3}")
-        print(f"feature extraction 4: {self.t5-self.t4}")
-        print(f"feature extraction 5: {self.t6-self.t5}")
-        print(f"feature extraction 6: {self.t7-self.t6}")
-        print(f"feature extraction 6: {self.t8-self.t7}")
-        
+
+        #returns classified action
         if prediction == 0:
             return "reload"
         if prediction == 1:
@@ -91,8 +53,6 @@ class Process:
             return "grenade"
         if prediction == 3:
             return "logout"
-#         if prediction == 4:
-#             return ""
     
     def raw_queue(self, raw_data):
         if len(self.raw_buffer) < 10:
@@ -202,12 +162,4 @@ class Process:
         f1_pfreq = self.compute_principle_frequency(f_n)
         return f1_mean, f1_var, f1_mad, f1_rms, f1_iqr, f1_per75, f1_kurtosis, f1_min_max, f1_sma, f1_zcr, f1_sc, f1_entropy, f1_energy, f1_pfreq
     
-    
-    def data_collection(self, raw_data):
-        # self.raw_data.append(raw_data)
-        
-        # with open('rawdata.csv', 'a+') as f:
-        #    f.write(','.join(map(str, raw_data)) + '\n')
-            
-        # detected_action = self.detect_action()
-        return "shoot"
+
