@@ -1,1 +1,7 @@
-external_comms/__pycache__/*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+server/
+.idea/
+.ipynb_checkpoints/
